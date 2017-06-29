@@ -53,7 +53,7 @@ def createMovingMask(x=0, y=0,teta=0,scale=1, frame_x=300, frame_y=300):
     (rows,cols)=np.shape(frame)
     M=cv2.getRotationMatrix2D((x+frame_x/2,y+frame_y/2), teta, scale)
     frame=cv2.warpAffine(frame,M,(rows,cols))
-    mask=frame[x:x+frame_x,y:y+frame_y]
+    mask=frame[y:y+frame_y,x:x+frame_x]
     return mask
 
 
@@ -228,7 +228,6 @@ print 't = ', t
 
 
 
-222
 
 
 
