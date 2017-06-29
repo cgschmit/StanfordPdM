@@ -53,128 +53,128 @@ def createMovingMask(x=0, y=0,teta=0,scale=1, frame_x=300, frame_y=300):
    frame=cv2.warpAffine(frame,M,(cols,rows))
    mask=frame[x:x+frame_x,y:y+frame_y]
    return mask
-   
+
    
 # Test ROTATION
 ################
-i=0
-img=createMovingMask(x=2000, y=2000,teta=0,scale=1, frame_x=600, frame_y=600)
-string_name="Test-FeaturesMatching/img-rot/image_"+str(i)+".png"
-cv2.imwrite(string_name,img)
-i=1
-img=createMovingMask(x=2000, y=2000,teta=10,scale=1, frame_x=600, frame_y=600)
-string_name="Test-FeaturesMatching/img-rot/image_"+str(i)+".png"
-cv2.imwrite(string_name,img)
-i=2
-img=createMovingMask(x=2000, y=2000,teta=12,scale=1, frame_x=600, frame_y=600)
-string_name="Test-FeaturesMatching/img-rot/image_"+str(i)+".png"
-cv2.imwrite(string_name,img)
-i=3
-img=createMovingMask(x=2000, y=2000,teta=27,scale=1, frame_x=600, frame_y=600)
-string_name="Test-FeaturesMatching/img-rot/image_"+str(i)+".png"
-cv2.imwrite(string_name,img)
-i=4
-img=createMovingMask(x=2000, y=2000,teta=36,scale=1, frame_x=600, frame_y=600)
-string_name="Test-FeaturesMatching/img-rot/image_"+str(i)+".png"
-cv2.imwrite(string_name,img)
+# i=0
+# img=createMovingMask(x=2000, y=2000,teta=0,scale=1, frame_x=600, frame_y=600)
+# string_name="Test-FeaturesMatching/img-rot/image_"+str(i)+".png"
+# cv2.imwrite(string_name,img)
+# i=1
+# img=createMovingMask(x=2000, y=2000,teta=10,scale=1, frame_x=600, frame_y=600)
+# string_name="Test-FeaturesMatching/img-rot/image_"+str(i)+".png"
+# cv2.imwrite(string_name,img)
+# i=2
+# img=createMovingMask(x=2000, y=2000,teta=12,scale=1, frame_x=600, frame_y=600)
+# string_name="Test-FeaturesMatching/img-rot/image_"+str(i)+".png"
+# cv2.imwrite(string_name,img)
+# i=3
+# img=createMovingMask(x=2000, y=2000,teta=27,scale=1, frame_x=600, frame_y=600)
+# string_name="Test-FeaturesMatching/img-rot/image_"+str(i)+".png"
+# cv2.imwrite(string_name,img)
+# i=4
+# img=createMovingMask(x=2000, y=2000,teta=36,scale=1, frame_x=600, frame_y=600)
+# string_name="Test-FeaturesMatching/img-rot/image_"+str(i)+".png"
+# cv2.imwrite(string_name,img)
 ################
 
 
 
 # Test ROTATION + TRANSLATION
 ################
-# i=0
-# img=createMovingMask(x=200, y=200,teta=0,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=1
-# img=createMovingMask(x=300, y=300,teta=10,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=2
-# img=createMovingMask(x=400, y=400,teta=0,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=3
-# img=createMovingMask(x=500, y=500,teta=-10,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=4
-# img=createMovingMask(x=600, y=600,teta=5,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=5
-# img=createMovingMask(x=700, y=700,teta=15,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=6
-# img=createMovingMask(x=800, y=800,teta=20,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=7
-# img=createMovingMask(x=900, y=900,teta=0,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=8
-# img=createMovingMask(x=1000, y=1000,teta=20,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=9
-# img=createMovingMask(x=1100, y=1100,teta=10,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=10
-# img=createMovingMask(x=1200, y=1200,teta=-10,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=11
-# img=createMovingMask(x=1300, y=1300,teta=-5,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=12
-# img=createMovingMask(x=1400, y=1400,teta=-2,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=13
-# img=createMovingMask(x=1500, y=1500,teta=0,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=14
-# img=createMovingMask(x=1600, y=1600,teta=10,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=15
-# img=createMovingMask(x=1700, y=1700,teta=20,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=16
-# img=createMovingMask(x=1800, y=1800,teta=40,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=17
-# img=createMovingMask(x=1900, y=1900,teta=30,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=18
-# img=createMovingMask(x=2000, y=2000,teta=10,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=19
-# img=createMovingMask(x=2100, y=2100,teta=0,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=20
-# img=createMovingMask(x=2200, y=2200,teta=-5,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=21
-# img=createMovingMask(x=2300, y=2300,teta=-10,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
-# i=22
-# img=createMovingMask(x=2400, y=2400,teta=0,scale=1, frame_x=600, frame_y=600)
-# string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
-# cv2.imwrite(string_name,img)
+i=0
+img=createMovingMask(x=200, y=200,teta=0,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=1
+img=createMovingMask(x=300, y=300,teta=10,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=2
+img=createMovingMask(x=400, y=400,teta=0,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=3
+img=createMovingMask(x=500, y=500,teta=-10,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=4
+img=createMovingMask(x=600, y=600,teta=5,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=5
+img=createMovingMask(x=700, y=700,teta=15,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=6
+img=createMovingMask(x=800, y=800,teta=20,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=7
+img=createMovingMask(x=900, y=900,teta=0,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=8
+img=createMovingMask(x=1000, y=1000,teta=20,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=9
+img=createMovingMask(x=1100, y=1100,teta=10,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=10
+img=createMovingMask(x=1200, y=1200,teta=-10,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=11
+img=createMovingMask(x=1300, y=1300,teta=-5,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=12
+img=createMovingMask(x=1400, y=1400,teta=-2,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=13
+img=createMovingMask(x=1500, y=1500,teta=0,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=14
+img=createMovingMask(x=1600, y=1600,teta=10,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=15
+img=createMovingMask(x=1700, y=1700,teta=20,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=16
+img=createMovingMask(x=1800, y=1800,teta=40,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=17
+img=createMovingMask(x=1900, y=1900,teta=30,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=18
+img=createMovingMask(x=2000, y=2000,teta=10,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=19
+img=createMovingMask(x=2100, y=2100,teta=0,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=20
+img=createMovingMask(x=2200, y=2200,teta=-5,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=21
+img=createMovingMask(x=2300, y=2300,teta=-10,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
+i=22
+img=createMovingMask(x=2400, y=2400,teta=0,scale=1, frame_x=600, frame_y=600)
+string_name="Test-FeaturesMatching/img-2D-rot/image_"+str(i)+".png"
+cv2.imwrite(string_name,img)
 ################
 
 
