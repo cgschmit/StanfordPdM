@@ -90,7 +90,7 @@ img_1 = createMovingMask(coords_1[0], coords_1[1], teta=10, scale=1, frame_x=siz
 # Load ORB stuff
 # -----------------------------
 
-feature_params_orb = dict ( nfeatures=50,
+feature_params_orb = dict ( nfeatures=10,
                             scaleFactor=2,
                             nlevels=5,
                             edgeThreshold=20,
@@ -110,9 +110,6 @@ feature_params_orb = dict ( nfeatures=50,
 # ROI_current=frame_gray[edge1:edge2, edge3:edge4]
 
 orb = cv2.ORB_create(**feature_params_orb)
-
-
-
 
 
 
@@ -175,7 +172,7 @@ fontFace=cv2.FONT_HERSHEY_SIMPLEX
 fontScale1=2
 
 # for j in range(coords_reordered_0.shape[0]):
-for j in range(5):
+for j in range(np.shape(coords_reordered_0)[0]):
     print 'j = ', j
     coords_reordered_centers_0 = array2tuple(coords_reordered_0[j], ret_int=True)
     coords_reordered_centers_1 = array2tuple(coords_reordered_1[j], ret_int=True)
@@ -210,18 +207,17 @@ cv2.waitKey(0)
 
 print 'coords_reordered_0 = ', coords_reordered_0.shape
 
-A = coords_reordered_0[:5]
-B = coords_reordered_1[:5]
+
 
 # print 'type(A) = ', type(A)
 
-for i in range(5):
-    print 'i = ', i
-    coords_reordered_0[i]=tuple2array(coords_reordered_0[i], False)
-    coords_reordered_1[i]=tuple2array(coords_reordered_1[i], False)
+# for i in range(5):
+#     print 'i = ', i
+#     coords_reordered_0[i]=tuple2array(coords_reordered_0[i], False)
+#     coords_reordered_1[i]=tuple2array(coords_reordered_1[i], False)
 
 
-R, t = rigid_transform_3D(A, B, frame_x=600, frame_y=600, margin=0)
+R, t = rigid_transform_3D(coords_reordered_0, coords_reordered_1, frame_x=600, frame_y=600, margin=0)
 
 print 'R = ', R
 print 't = ', t
