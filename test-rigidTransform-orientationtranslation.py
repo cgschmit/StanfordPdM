@@ -61,6 +61,7 @@ def applyRotationTo(points, frame_x, frame_y, teta, x=0, y=0, scale=1):
     center_x=x+frame_x/2
     center_y=y+frame_y/2
     teta=deg2rad(teta)
+    # Rotation Matrix
     new_points=np.zeros(np.shape(points))
     for i in range(np.shape(points)[0]):
         new_points[i][0]=int((points[i][0]-center_x)*np.cos(teta)-(points[i][1]-center_y)*np.sin(teta)+center_x)
@@ -68,10 +69,12 @@ def applyRotationTo(points, frame_x, frame_y, teta, x=0, y=0, scale=1):
     return new_points
 
 def rad2deg(rad):
-    return rad*180/3.14
+    deg=rad*180/3.14
+    return deg
 
 def deg2rad(deg):
-    return deg*3.14/180
+    rad=deg*3.14/180
+    return rad
 
 # VARIABLES
 #-----------------------------
@@ -193,22 +196,21 @@ while(1):
 
         print "TRANSLATION TOTALE X:",total_translation_x
         print "TRANSLATION TOTALE Y:",total_translation_y
-        print "ANGLE:", angle
-        print "TOTAL ANGLE:", total_angle
+        print "TRANSLATION X:",translation_x
+        print "TRANSLATION Y:",translation_y
+        print "ANGLE:",angle
+        print "TOTAL ANGLE:",total_angle
 
         ROI_current=ROI_new
     
     else:
         break
 
-
+# Variables for Visualization
 img_2D_rot_posFrame=[(200,200),(300,300),(400,400),(500,500),(600,600),(700,700),(800,800),(900,900),(1000,1000),(1100,1100),(1200,1200),(1300,1300),(1400,1400),(1500,1500),(1600,1600),(1700,1700),(1800,1800),(1900,1900),(2000,2000),(2100,2100),(2200,2200),(2300,2300),(2400,2400)]
 img_2D_rot_displ=[(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100),(100,100)]
 img_2D_rot_angle=[0,10,0,-10,5,15,20,0,20,10,-10,-5,-2,0,10,20,40,30,10,0,-5,-10,0]
 img_2D_rot_cummDispl=[(100,100),(200,200),(300,300),(400,400),(500,500),(600,600),(700,700),(800,800),(900,900),(1000,1000),(1100,1100),(1200,1200),(1300,1300),(1400,1400),(1500,1500),(1600,1600),(1700,1700),(1800,1800),(1900,1900),(2000,2000),(2100,2100),(2200,2200),(2300,2300)]
-
-x=0
-y=0
 
 frame_x_ROI=(1-2*margin)*m_frame_x
 frame_y_ROI=(1-2*margin)*m_frame_y
@@ -226,16 +228,16 @@ pt3=[frame_x_ROI,frame_y_ROI]
 pt4=[0,frame_y_ROI]
 
 
-pt1_current=tuple(map(operator.add,img_2D_rot_posFrame[0],(margin*m_frame_x,margin*m_frame_y)))
-pt2_current=tuple(map(operator.add,mask_x,tuple(map(operator.add,img_2D_rot_posFrame[0],(margin*m_frame_x,margin*m_frame_y)))))
-pt3_current=tuple(map(operator.add,mask_xy,tuple(map(operator.add,img_2D_rot_posFrame[0],(margin*m_frame_x,margin*m_frame_y)))))
-pt4_current=tuple(map(operator.add,mask_y,tuple(map(operator.add,img_2D_rot_posFrame[0],(margin*m_frame_x,margin*m_frame_y)))))
-pt1_current=tuple2array(pt1_current)
-pt2_current=tuple2array(pt2_current)
-pt3_current=tuple2array(pt3_current)
-pt4_current=tuple2array(pt4_current)
-current_frame=np.array([pt1_current,pt2_current,pt3_current,pt4_current])
-current_point_frame_rotated=applyRotationTo(current_frame, frame_x_ROI, frame_y_ROI, -img_2D_rot_angle[0], img_2D_rot_posFrame[0][0]+margin*m_frame_x, img_2D_rot_posFrame[0][0]+margin*m_frame_x)
+# pt1_current=tuple(map(operator.add,img_2D_rot_posFrame[0],(margin*m_frame_x,margin*m_frame_y)))
+# pt2_current=tuple(map(operator.add,mask_x,tuple(map(operator.add,img_2D_rot_posFrame[0],(margin*m_frame_x,margin*m_frame_y)))))
+# pt3_current=tuple(map(operator.add,mask_xy,tuple(map(operator.add,img_2D_rot_posFrame[0],(margin*m_frame_x,margin*m_frame_y)))))
+# pt4_current=tuple(map(operator.add,mask_y,tuple(map(operator.add,img_2D_rot_posFrame[0],(margin*m_frame_x,margin*m_frame_y)))))
+# pt1_current=tuple2array(pt1_current)
+# pt2_current=tuple2array(pt2_current)
+# pt3_current=tuple2array(pt3_current)
+# pt4_current=tuple2array(pt4_current)
+# current_frame=np.array([pt1_current,pt2_current,pt3_current,pt4_current])
+# current_point_frame_rotated=applyRotationTo(current_frame, frame_x_ROI, frame_y_ROI, -img_2D_rot_angle[0], img_2D_rot_posFrame[0][0]+margin*m_frame_x, img_2D_rot_posFrame[0][0]+margin*m_frame_x)
 
 for i in range(np.shape(all_feats_new)[0]):
     img=cv2.imread("Total3.jpg")
@@ -250,7 +252,7 @@ for i in range(np.shape(all_feats_new)[0]):
     pt3_current=tuple2array(pt3_current)
     pt4_current=tuple2array(pt4_current)
     current_frame=np.array([pt1_current,pt2_current,pt3_current,pt4_current])
-    current_point_frame_rotated=applyRotationTo(current_frame, frame_x_ROI, frame_y_ROI, -img_2D_rot_angle[i], img_2D_rot_posFrame[i][0]+margin*m_frame_x, img_2D_rot_posFrame[i][1]+margin*m_frame_y)
+    current_point_frame_rotated=applyRotationTo(current_frame, frame_x_ROI, frame_y_ROI, img_2D_rot_angle[i], img_2D_rot_posFrame[i][0]+margin*m_frame_x, img_2D_rot_posFrame[i][1]+margin*m_frame_y)
 
     # Print of Frame time T
     pt1_new=tuple(map(operator.add,img_2D_rot_posFrame[i+1],(margin*m_frame_x,margin*m_frame_y)))
@@ -262,7 +264,7 @@ for i in range(np.shape(all_feats_new)[0]):
     pt3_new=tuple2array(pt3_new)
     pt4_new=tuple2array(pt4_new)
     new_frame=np.array([pt1_new,pt2_new,pt3_new,pt4_new])
-    new_point_frame_rotated=applyRotationTo(new_frame, frame_x_ROI, frame_y_ROI, -img_2D_rot_angle[i+1], img_2D_rot_posFrame[i+1][0]+margin*m_frame_x, img_2D_rot_posFrame[i+1][1]+margin*m_frame_y)
+    new_point_frame_rotated=applyRotationTo(new_frame, frame_x_ROI, frame_y_ROI, img_2D_rot_angle[i+1], img_2D_rot_posFrame[i+1][0]+margin*m_frame_x, img_2D_rot_posFrame[i+1][1]+margin*m_frame_y)
 
     # Print of both Frame on Image and Legend
     cv2.polylines(img,np.int32([current_point_frame_rotated]),True,(0,255,0),thickness=5)
@@ -276,14 +278,14 @@ for i in range(np.shape(all_feats_new)[0]):
 
     # Printing each frame with legend on big map
     for j in range(np.shape(all_feats_current[i])[0]):
-        center_current=array2tuple(all_feats_current[i][j],ret_int=True)
+        center_current=array2tuple(center_current_alt[j],ret_int=True)
         center_new=array2tuple(center_new_alt[j],ret_int=True)
 
         center_current=tuple(map(operator.add,center_current,tuple(map(operator.add,img_2D_rot_posFrame[i],(margin*m_frame_x,margin*m_frame_y)))))
         center_new=tuple(map(operator.add,center_new,tuple(map(operator.add,img_2D_rot_posFrame[i+1],(margin*m_frame_x,margin*m_frame_y)))))
         
         cv2.circle(img,(int(center_current[0]),int(center_current[1])),30,(0,255,0),5)
-        cv2.circle(img,(int(center_new[0]),int(center_new[1])),30,(255,0,0),5)
+        cv2.circle(img,(int(center_new[0]),int(center_new[1])),35,(255,0,0),5)
         
         text_j0=tuple(map(operator.add,center_current,(40,40)))
         text_j1=tuple(map(operator.add,center_new,(40,40)))

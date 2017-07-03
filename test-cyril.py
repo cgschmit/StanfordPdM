@@ -84,8 +84,8 @@ img=cv2.imread("Total3.jpg")
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
-coords_0 = [2000, 2000, 0]
-coords_1 = [2000, 2100, 0]
+coords_0 = [1000, 1000, 0]
+coords_1 = [1100, 1100, 0]
 size = 600
 
 # img_0 = img[coords_0[0]:coords_0[0]+size, coords_0[1]:coords_0[1]+size, :]
@@ -139,7 +139,7 @@ bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
 matches = bf.knnMatch(des_0, des_1, k=2)
 good = []
 for m,n in matches:
-    if m.distance < 0.6*n.distance:
+    if m.distance < 0.75*n.distance:
         good.append([m])
 
 
@@ -176,26 +176,26 @@ fontScale1=2
 #img contains the big frame
 
 #Realign points with the axis of General frame
-coords_reordered_0=applyRotationTo(coords_reordered_0, size, size, 5, x=0, y=0, scale=1)
-coords_reordered_1=applyRotationTo(coords_reordered_1, size, size, -5, x=0, y=0, scale=1)
+coords_reordered_0=applyRotationTo(coords_reordered_0, size, size, -5, x=0, y=0, scale=1)
+coords_reordered_1=applyRotationTo(coords_reordered_1, size, size, 5, x=0, y=0, scale=1)
 
 
 # for j in range(coords_reordered_0.shape[0]):
 for j in range(np.shape(coords_reordered_0)[0]):
     print 'j = ', j
     center_0=coords_reordered_0[j]+[2000,2000]
-    center_1=coords_reordered_1[j]+[2000,2100]
+    center_1=coords_reordered_1[j]+[2100,2100]
     center_0 = array2tuple(center_0, ret_int=True)
     center_1 = array2tuple(center_1, ret_int=True)
 
     cv2.circle(img, center_0, 30, (0,255,0), 5)
-    cv2.circle(img, center_1, 30, (255,255,255), 5)
+    cv2.circle(img, center_1, 35, (255,255,255), 5)
 
     text_j0=tuple(map(operator.add, center_0, (40,40)))
     cv2.putText(img, str(j), (int(text_j0[0]),int(text_j0[1])), fontFace, fontScale1, (0,255,0),thickness=3)
 
     text_j1 = tuple(map(operator.add, center_1, (40,40)))
-    cv2.putText(img, str(j), (int(text_j1[0]),int(text_j1[1])), fontFace, fontScale1, (0,255,0),thickness=3)
+    cv2.putText(img, str(j), (int(text_j1[0]),int(text_j1[1])), fontFace, fontScale1, (255,255,255),thickness=3)
 
 #print 'type(coords_reordered_centers_0) = ', type(coords_reordered_centers_0)
 
