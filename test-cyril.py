@@ -35,8 +35,6 @@ def rigid_transform_3D(A, B, frame_x, frame_y, margin=0):
     N = A.shape[0]; # total points
     centroid_A = np.mean(A, axis=0)
     centroid_B = np.mean(B, axis=0)
-    print "centroid_A =",centroid_A 
-    print "centroid_B =",centroid_B
     # centre the points to their center of mass 
     AA = A - np.tile(centroid_A, (N, 1))
     BB = B - np.tile(centroid_B, (N, 1))
@@ -45,17 +43,13 @@ def rigid_transform_3D(A, B, frame_x, frame_y, margin=0):
     R = np.dot(Vt.T,U.T)
     #Recenter rotation to centre of frame and not to the left top corner.
     #Positioning to the origin of the axes
-    print "1-2*margin = ",(1-2*margin)/2
     recenter= centroid_A - [ (1-2*margin) / 2 * frame_x , (1-2*margin) / 2 * frame_y]
-    print "recenter = ",recenter
     #Applying Rotation of the recentered points
     recenter_1=np.dot(R,recenter)
-    print "recenter_1 = ",recenter_1
     #Adding the translation back
     recenter_2=recenter_1+[(1-2*margin)/2*frame_x,(1-2*margin)/2*frame_y]
-    print "recenter_2 = ",recenter_2
-    #if np.linalg.det(R) < 0:
-    #   print "Reflection detected"
+    if np.linalg.det(R) < 0:
+       print "Reflection detected"
     #   Vt[2,:] *= -1
     #   R = Vt.T * U.T
     t= centroid_B-recenter_2
@@ -69,6 +63,21 @@ def createMovingMask(x=0, y=0,teta=0,scale=1, frame_x=300, frame_y=300):
     mask=frame[y:y+frame_y,x:x+frame_x]
     return mask
 
+def applyRotationTo(points, frame_x, frame_y, teta, x=0, y=0, scale=1):
+    center_x=x+frame_x/2
+    center_y=y+frame_y/2
+    teta=deg2rad(teta)
+    # Rotation Matrix
+    new_points=np.zeros(np.shape(points))
+    for i in range(np.shape(points)[0]):
+        new_points[i][0]=int((points[i][0]-center_x)*np.cos(teta)-(points[i][1]-center_y)*np.sin(teta)+center_x)
+        new_points[i][1]=int((points[i][0]-center_x)*np.sin(teta)+(points[i][1]-center_y)*np.cos(teta)+center_y)
+    return new_points
+
+def deg2rad(deg):
+    rad=deg*3.14/180
+    return rad
+
 img=cv2.imread("Total3.jpg")
 
 # cv2.imshow('img',img)
@@ -76,14 +85,14 @@ img=cv2.imread("Total3.jpg")
 # cv2.destroyAllWindows()
 
 coords_0 = [2000, 2000, 0]
-coords_1 = [2000, 2000, 0]
+coords_1 = [2000, 2100, 0]
 size = 600
 
 # img_0 = img[coords_0[0]:coords_0[0]+size, coords_0[1]:coords_0[1]+size, :]
 # img_1 = img[coords_1[0]:coords_1[0]+size, coords_1[1]:coords_1[1]+size, :]
 
-img_0 = createMovingMask(coords_0[0], coords_0[1], teta=0, scale=1, frame_x=size, frame_y=size)
-img_1 = createMovingMask(coords_1[0], coords_1[1], teta=10, scale=1, frame_x=size, frame_y=size)
+img_0 = createMovingMask(coords_0[0], coords_0[1], teta=-5, scale=1, frame_x=size, frame_y=size)
+img_1 = createMovingMask(coords_1[0], coords_1[1], teta=5, scale=1, frame_x=size, frame_y=size)
 
 print "np.shape(img_0)",np.shape(img_0)
 print "np.shape(img_1)",np.shape(img_1)
@@ -100,7 +109,7 @@ print "np.shape(img_1)",np.shape(img_1)
 # Load ORB stuff
 # -----------------------------
 
-feature_params_orb = dict ( nfeatures=10,
+feature_params_orb = dict ( nfeatures=30,
                             scaleFactor=2,
                             nlevels=5,
                             edgeThreshold=20,
@@ -164,32 +173,41 @@ print "coords_reordered_1 = ",coords_reordered_1
 fontFace=cv2.FONT_HERSHEY_SIMPLEX
 fontScale1=2
 
+#img contains the big frame
+
+#Realign points with the axis of General frame
+coords_reordered_0=applyRotationTo(coords_reordered_0, size, size, 5, x=0, y=0, scale=1)
+coords_reordered_1=applyRotationTo(coords_reordered_1, size, size, -5, x=0, y=0, scale=1)
+
+
 # for j in range(coords_reordered_0.shape[0]):
 for j in range(np.shape(coords_reordered_0)[0]):
     print 'j = ', j
-    coords_reordered_centers_0 = array2tuple(coords_reordered_0[j], ret_int=True)
-    coords_reordered_centers_1 = array2tuple(coords_reordered_1[j], ret_int=True)
+    center_0=coords_reordered_0[j]+[2000,2000]
+    center_1=coords_reordered_1[j]+[2000,2100]
+    center_0 = array2tuple(center_0, ret_int=True)
+    center_1 = array2tuple(center_1, ret_int=True)
 
-    cv2.circle(img_0, coords_reordered_centers_0, 30, (0,255,0), 5)
-    cv2.circle(img_0, coords_reordered_centers_1, 30, (255,255,255), 5)
-    cv2.circle(img_0, (300,300), 10, (255,255,255), 2)
-    cv2.circle(img_0, (300,300), 10, (255,255,255), 2)
+    cv2.circle(img, center_0, 30, (0,255,0), 5)
+    cv2.circle(img, center_1, 30, (255,255,255), 5)
 
-    text_j0=tuple(map(operator.add, coords_reordered_centers_0, (40,40)))
-    cv2.putText(img_0, str(j), (int(text_j0[0]),int(text_j0[1])), fontFace, fontScale1, (0,255,0),thickness=3)
+    text_j0=tuple(map(operator.add, center_0, (40,40)))
+    cv2.putText(img, str(j), (int(text_j0[0]),int(text_j0[1])), fontFace, fontScale1, (0,255,0),thickness=3)
 
-    text_j1 = tuple(map(operator.add, coords_reordered_centers_1, (40,40)))
-    cv2.putText(img_0, str(j), (int(text_j1[0]),int(text_j1[1])), fontFace, fontScale1, (0,255,0),thickness=3)
+    text_j1 = tuple(map(operator.add, center_1, (40,40)))
+    cv2.putText(img, str(j), (int(text_j1[0]),int(text_j1[1])), fontFace, fontScale1, (0,255,0),thickness=3)
 
-print 'type(coords_reordered_centers_0) = ', type(coords_reordered_centers_0)
+#print 'type(coords_reordered_centers_0) = ', type(coords_reordered_centers_0)
 
-cv2.imshow('img_0',img_0)
+cv2.imwrite("image_test.png",img)
+
+#cv2.imshow('img_0',img)
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
 
 #cv2.imshow('img_1',img_1)
-cv2.waitKey(0)
+#cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
 
