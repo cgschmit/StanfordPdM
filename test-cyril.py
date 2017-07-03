@@ -1,6 +1,11 @@
+from __future__ import division
 import numpy as np
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+from matplotlib import pyplot as plt
 import cv2
 import operator
+
 
 def formatting(tupleTab):
     totalTab=[]
@@ -24,30 +29,38 @@ def tuple2array(tup_le,ret_int):
         arr_ay=[tup_le[0],tup_le[1]]
     return arr_ay
 
-
-def rigid_transform_3D(A, B, frame_x, frame_y, margin):
+def rigid_transform_3D(A, B, frame_x, frame_y, margin=0):
+    # DONT CALL WITH 1 FEATURE MATCHED, SUM WILL BE DONE OVER X AND Y instead of all the X and all the Y.
     assert len(A) == len(B)
     N = A.shape[0]; # total points
     centroid_A = np.mean(A, axis=0)
     centroid_B = np.mean(B, axis=0)
-    # centre the points to their center of mass
+    print "centroid_A =",centroid_A 
+    print "centroid_B =",centroid_B
+    # centre the points to their center of mass 
     AA = A - np.tile(centroid_A, (N, 1))
     BB = B - np.tile(centroid_B, (N, 1))
     H = np.dot(np.transpose(AA),BB)
     U, S, Vt = np.linalg.svd(H)
     R = np.dot(Vt.T,U.T)
     #Recenter rotation to centre of frame and not to the left top corner.
-    recenter=centroid_A-[(1-2*margin)/2*frame_x,(1-2*margin)/2*frame_y]
-    recenter=np.dot(R,recenter)+[(1-2*margin)/2*frame_x,(1-2*margin)/2*frame_y]
+    #Positioning to the origin of the axes
+    print "1-2*margin = ",(1-2*margin)/2
+    recenter= centroid_A - [ (1-2*margin) / 2 * frame_x , (1-2*margin) / 2 * frame_y]
+    print "recenter = ",recenter
+    #Applying Rotation of the recentered points
+    recenter_1=np.dot(R,recenter)
+    print "recenter_1 = ",recenter_1
+    #Adding the translation back
+    recenter_2=recenter_1+[(1-2*margin)/2*frame_x,(1-2*margin)/2*frame_y]
+    print "recenter_2 = ",recenter_2
     #if np.linalg.det(R) < 0:
     #   print "Reflection detected"
     #   Vt[2,:] *= -1
     #   R = Vt.T * U.T
-    t= centroid_B-recenter
+    t= centroid_B-recenter_2
     return R, t
 
-
-# Beware that the rotation is not working for frame that are not squared. So keep the frame squared.
 def createMovingMask(x=0, y=0,teta=0,scale=1, frame_x=300, frame_y=300):
     frame=cv2.imread("Total3.jpg",0)
     (rows,cols)=np.shape(frame)
@@ -56,16 +69,14 @@ def createMovingMask(x=0, y=0,teta=0,scale=1, frame_x=300, frame_y=300):
     mask=frame[y:y+frame_y,x:x+frame_x]
     return mask
 
-
 img=cv2.imread("Total3.jpg")
-
 
 # cv2.imshow('img',img)
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
-coords_0 = [100, 200, 0]
-coords_1 = [100, 200, 0]
+coords_0 = [2000, 2000, 0]
+coords_1 = [2000, 2000, 0]
 size = 600
 
 # img_0 = img[coords_0[0]:coords_0[0]+size, coords_0[1]:coords_0[1]+size, :]
@@ -74,7 +85,8 @@ size = 600
 img_0 = createMovingMask(coords_0[0], coords_0[1], teta=0, scale=1, frame_x=size, frame_y=size)
 img_1 = createMovingMask(coords_1[0], coords_1[1], teta=10, scale=1, frame_x=size, frame_y=size)
 
-
+print "np.shape(img_0)",np.shape(img_0)
+print "np.shape(img_1)",np.shape(img_1)
 
 #cv2.imshow('img_0',img_0)
 # cv2.waitKey(0)
@@ -83,8 +95,6 @@ img_1 = createMovingMask(coords_1[0], coords_1[1], teta=10, scale=1, frame_x=siz
 #cv2.imshow('img_1',img_1)
 #cv2.waitKey(0)
 #cv2.destroyAllWindows()
-
-
 
 # -----------------------------
 # Load ORB stuff
@@ -100,18 +110,7 @@ feature_params_orb = dict ( nfeatures=10,
                             )
 
 
-# frame_gray=cv2.imread("img-2D-rot/image_0.png",0)
-# (m_frame_x,m_frame_y)=np.shape(frame_gray)
-# margin=0.1
-# edge1=int(m_frame_x*margin)
-# edge2=int(m_frame_x*(1-margin))
-# edge3=int(m_frame_y*margin)
-# edge4=int(m_frame_y*(1-margin))
-# ROI_current=frame_gray[edge1:edge2, edge3:edge4]
-
 orb = cv2.ORB_create(**feature_params_orb)
-
-
 
 # -----------------------------
 # Feature detection
@@ -131,12 +130,8 @@ bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
 matches = bf.knnMatch(des_0, des_1, k=2)
 good = []
 for m,n in matches:
-    if m.distance < 0.5*n.distance:
+    if m.distance < 0.6*n.distance:
         good.append([m])
-
-
-
-
 
 
 print 'img_0.shape = ', img_0.shape
@@ -145,8 +140,6 @@ print len(kp_0), ' features in img_0'
 print len(kp_1), ' features in img_1'
 print len(good), ' features in good'
 print 'type(good) = ', type(good[0][0])
-
-
 
 # ------------------------------------
 # Reorder features according to matches
@@ -158,11 +151,11 @@ for i in range(np.shape(good)[0]):
     coords_reordered_0[i]=feats_0[good[i][0].queryIdx]
     coords_reordered_1[i]=feats_1[good[i][0].trainIdx]
 
-
-
 print 'type(coords_reordered_0) = ', type(coords_reordered_0)
 print 'coords_reordered_0.shape = ', coords_reordered_0.shape
 print 'coords_reordered_1.shape = ', coords_reordered_1.shape
+print "coords_reordered_0 = ",coords_reordered_0
+print "coords_reordered_1 = ",coords_reordered_1
 
 # ------------------------------------
 # Draw circles on masks
@@ -178,16 +171,15 @@ for j in range(np.shape(coords_reordered_0)[0]):
     coords_reordered_centers_1 = array2tuple(coords_reordered_1[j], ret_int=True)
 
     cv2.circle(img_0, coords_reordered_centers_0, 30, (0,255,0), 5)
-    cv2.circle(img_1, coords_reordered_centers_1, 30, (0,255,0), 5)
+    cv2.circle(img_0, coords_reordered_centers_1, 30, (255,255,255), 5)
     cv2.circle(img_0, (300,300), 10, (255,255,255), 2)
-    cv2.circle(img_1, (300,300), 10, (255,255,255), 2)
+    cv2.circle(img_0, (300,300), 10, (255,255,255), 2)
 
     text_j0=tuple(map(operator.add, coords_reordered_centers_0, (40,40)))
     cv2.putText(img_0, str(j), (int(text_j0[0]),int(text_j0[1])), fontFace, fontScale1, (0,255,0),thickness=3)
 
     text_j1 = tuple(map(operator.add, coords_reordered_centers_1, (40,40)))
-    cv2.putText(img_1, str(j), (int(text_j1[0]),int(text_j1[1])), fontFace, fontScale1, (0,255,0),thickness=3)
-
+    cv2.putText(img_0, str(j), (int(text_j1[0]),int(text_j1[1])), fontFace, fontScale1, (0,255,0),thickness=3)
 
 print 'type(coords_reordered_centers_0) = ', type(coords_reordered_centers_0)
 
@@ -196,7 +188,7 @@ cv2.imshow('img_0',img_0)
 # cv2.destroyAllWindows()
 
 
-cv2.imshow('img_1',img_1)
+#cv2.imshow('img_1',img_1)
 cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
@@ -205,9 +197,9 @@ cv2.waitKey(0)
 # Compute displacement (x, y q)
 # ------------------------------------
 
-print 'coords_reordered_0 = ', coords_reordered_0.shape
-
-
+print 'coords_reordered_0.shape = ', coords_reordered_0.shape
+print 'coords_reordered_0 = ', coords_reordered_0
+print 'coords_reordered_1 = ', coords_reordered_1
 
 # print 'type(A) = ', type(A)
 
@@ -216,22 +208,8 @@ print 'coords_reordered_0 = ', coords_reordered_0.shape
 #     coords_reordered_0[i]=tuple2array(coords_reordered_0[i], False)
 #     coords_reordered_1[i]=tuple2array(coords_reordered_1[i], False)
 
-
 R, t = rigid_transform_3D(coords_reordered_0, coords_reordered_1, frame_x=600, frame_y=600, margin=0)
 
 print 'R = ', R
+print 'angle =', 180/3.14*(np.arctan2(-R.item([1][0]),R.item([0][0])))
 print 't = ', t
-
-
-
-
-
-
-
-
-
-
-
-
-
-
