@@ -16,6 +16,9 @@ class OpticalFlow:
 		self.pos_x=pos_x
 		self.pos_y=pos_y
 		self.scale=scale
+		self.estimated_pos_x_tab=[]
+		self.estimated_pos_y_tab=[]
+		self.estimated_orientation_tab=[]
 
 		feature_params_orb = dict ( nfeatures=50,
                             scaleFactor=2,
@@ -40,6 +43,10 @@ class OpticalFlow:
 	def rad2deg(self, rad):
 		deg=rad*180/3.14
 		return deg
+
+	def deg2rad(self, deg):
+		rad=deg*3.14/180
+		return rad
 
 	def update(self, old_frame, current_frame):
 		# Feature Extraction
@@ -83,7 +90,7 @@ class OpticalFlow:
 		for i in range(np.shape(good)[0]):
 			inpu_t[i]=feats_old[good[i][0].queryIdx]
 			outpu_t[i]=feats_current[good[i][0].trainIdx]
-		return inpu_t,outpu_t
+		return inpu_t,outpu_t,good
 
 	def AffineTransform(self, inpu_t, outpu_t):
 		# Credit goes to Nghiaho, modification for this case made by me
@@ -100,15 +107,18 @@ class OpticalFlow:
 		# Recenter rotation to centre of frame and not to the left top corner
 		recenter=centroid_input-[(1-2*self.margin)/2*self.frame_x,(1-2*self.margin)/2*self.frame_y]
 		recenter=np.dot(R,recenter)+[(1-2*self.margin)/2*self.frame_x,(1-2*self.margin)/2*self.frame_y]
-		t= centroid_output-recenter
+		t= -centroid_output.T+recenter
 		return R, t
 
+
 	def actualize_pos_orientation(self,R,t):
-		angle=self.rad2deg(np.arctan2(-R.item([1][0]),R.item([0][0])))
-		self.angle+=angle
-		self.pos_x=t[0]*np.cos(self.angle)
-		self.pos_y=t[1]*np.cos(self.angle)
-		return 
+		local_angle=self.rad2deg(np.arctan2(-R.item([1][0]),R.item([0][0])))
+		local_x=t[0]*np.cos(self.angle)
+		local_y=t[1]*np.cos(self.angle)
+		self.angle+=local_angle
+		self.pos_x+=t[0]*np.cos(self.angle)
+		self.pos_y+=t[1]*np.cos(self.angle)
+		return local_x,local_y,local_angle
 
 	def create_dataframe(self, pos_x=0, pos_y=0, angle=0):
 		frame=cv2.imread("Total3.jpg",0)
@@ -119,39 +129,86 @@ class OpticalFlow:
 		return mask
 
 	def run_test(self, pos_x_tab, pos_y_tab ,orientation_tab):
-		estimated_pos_x_tab=[]
-		estimated_pos_y_tab=[]
-		estimated_orientation_tab=[]
+		self.estimated_pos_x_tab.append(self.pos_x)
+		self.estimated_pos_y_tab.append(self.pos_y)
+		self.estimated_orientation_tab.append(self.angle)
 		for i in range(np.shape(pos_x_tab)[0]-1):
+			print "ITERATION",i
 			img_0=self.create_dataframe(pos_x_tab[i], pos_y_tab[i], orientation_tab[i])
 			img_1=self.create_dataframe(pos_x_tab[i+1], pos_y_tab[i+1], orientation_tab[i+1])
 
 			kp_0,des_0,feats_0=self.ExtractingFeaturesORB(img_0)
 			kp_1,des_1,feats_1=self.ExtractingFeaturesORB(img_1)
 
-			matched_0,matched_1=self.MatchingFeatures(des_0, des_1, feats_0, feats_1)
+			matched_0,matched_1,good=self.MatchingFeatures(des_0, des_1, feats_0, feats_1)
+
+			drawMatches=cv2.drawMatchesKnn(img_0, kp_0, img_1, kp_1, good, None, flags=2)
+			cv2.imwrite("matchedFeatures/match_"+str(i)+".png",drawMatches)
+
 
 			if np.shape(matched_0)[0]==0:
-				self.estimating()
+				print "ESTIMATION TO BE DONE; YET NOT DEVELOPED"
+				self.estimating(i)
 			else:
 				R,t=self.AffineTransform(matched_0, matched_1)
-				self.actualize_pos_orientation(R,t)
+				local_x,local_y,local_angle=self.actualize_pos_orientation(R,t)
+				print "---------------"
+				print "local_x (DISPLACEMENT fbf)",local_x
+				print "local_y (DISPLACEMENT fbf)",local_y
+				print "local_angle (DISPLACEMENT fbf)",local_angle
+				print "---------------"
+			print "---------------"
+			print "self.pos_x (TOTAL DISPLACEMENT) = ",self.pos_x
+			print "self.pos_y (TOTAL DISPLACEMENT) = ",self.pos_y
+			print "self.angle (TOTAL DISPLACEMENT) = ",self.angle
+			print "---------------"
 
-			estimated_pos_x_tab.append(self.pos_x)
-			estimated_pos_y_tab.append(self.pos_y)
-			estimated_orientation_tab.append(self.angle)
+			self.estimated_pos_x_tab.append(self.pos_x)
+			self.estimated_pos_y_tab.append(self.pos_y)
+			self.estimated_orientation_tab.append(self.angle)
 
-		self.plot_visualization(pos_x_tab,pos_y_tab,orientation_tab, estimated_pos_x_tab, estimated_pos_y_tab, estimated_orientation_tab)
+		print "estimated_pos_x_tab = ",self.estimated_pos_x_tab
+		print "estimated_pos_y_tab = ",self.estimated_pos_y_tab
+		print "estimated_orientation_tab = ",self.estimated_orientation_tab
+
+		self.plot_visualization(pos_x_tab,pos_y_tab,orientation_tab)
 
 
-	def estimating(self):
-		# DO SOME KALMAN FILTERING TO ESTIMATED VALUE OF UNFOUND MATHCING FEATURES DISPLACEMENT'S
-		self.pos_x+=0
-		self.pos_y+=0
-		self.angle+=0
+	def estimating(self,i):
+		# DO SOME FILTERING TO ESTIMATED VALUE OF UNFOUND MATHCING FEATURES DISPLACEMENT'S
+
+		print "BEFORE"
+		print "self.pos_x = ",self.pos_x
+		print "self.pos_y = ",self.pos_y
+		print "self.angle = ",self.angle
+		print np.shape(self.estimated_pos_x_tab)
+
+		if np.shape(self.estimated_pos_x_tab)[0]>2:
+			print "self.estimated_pos_x_tab[i] = ",self.estimated_pos_x_tab[i]
+			print "self.estimated_pos_x_tab[i-1] = ",self.estimated_pos_x_tab[i-1]
+			print "self.estimated_pos_x_tab[i-2] = ",self.estimated_pos_x_tab[i-2]
+			self.pos_x+=(0.7*(self.estimated_pos_x_tab[i]-self.estimated_pos_x_tab[i-1])+0.3*(self.estimated_pos_x_tab[i-1]-self.estimated_pos_x_tab[i-2]))
+			self.pos_x+=(0.7*(self.estimated_pos_y_tab[i]-self.estimated_pos_y_tab[i-1])+0.3*(self.estimated_pos_y_tab[i-1]-self.estimated_pos_y_tab[i-2]))
+			self.pos_x+=(0.7*(self.estimated_orientation_tab[i]-self.estimated_orientation_tab[i-1])+0.3*(self.estimated_orientation_tab[i-1]-self.estimated_orientation_tab[i-2]))
+		elif np.shape(self.estimated_pos_x_tab)[0]==2:
+			print "self.estimated_pos_x_tab[i] = ",self.estimated_pos_x_tab[i]
+			print "self.estimated_pos_x_tab[i-1] = ",self.estimated_pos_x_tab[i-1]
+			self.pos_x+=(self.estimated_pos_x_tab[i]-self.estimated_pos_x_tab[i-1])
+			self.pos_y+=(self.estimated_pos_y_tab[i]-self.estimated_pos_y_tab[i-1])
+			self.angle+=(self.estimated_orientation_tab[i]-self.estimated_orientation_tab[i-1])
+		elif np.shape(self.estimated_pos_x_tab)[0]==0 or np.shape(self.estimated_pos_x_tab)[0]==1:
+			self.pos_x+=0
+			self.pos_y+=0
+			self.angle+=0
+
+		print "AFTER"
+		print "self.pos_x = ",self.pos_x
+		print "self.pos_y = ",self.pos_y
+		print "self.angle = ",self.angle
+
 		return 
 
-	def plot_visualization(self, pos_x_tab,pos_y_tab,orientation_tab, estimated_pos_x_tab, estimated_pos_y_tab, estimated_orientation_tab):
+	def plot_visualization(self, pos_x_tab,pos_y_tab,orientation_tab):
 		img=cv2.imread("Total3.jpg",1)
 		fontFace=cv2.FONT_HERSHEY_SIMPLEX
 		fontScale=1.5
@@ -159,64 +216,73 @@ class OpticalFlow:
 		color_real=(0,255,0)
 		color_estimation=(255,0,0)
 
+		for i in range(np.shape(orientation_tab)[0]):
+			orientation_tab[i]=self.deg2rad(orientation_tab[i])
+			
 		### PLOT REAL DATA
 		cv2.circle(img,(int(pos_x_tab[0]),int(pos_y_tab[0])),30,color_real,5)
-		#Draw orientation of robot
+		text_pos=tuple(map(operator.add,(int(pos_x_tab[0]),int(pos_y_tab[0])),(40,-10)))
+		cv2.putText(img, str(0), text_pos, fontFace, fontScale, color_real,thickness=3)
 		orientation_line=tuple(map(operator.add,(pos_x_tab[0],pos_y_tab[0]),(30*np.cos(orientation_tab[0]),30*np.sin(orientation_tab[0]))))
 		cv2.line(img,(int(pos_x_tab[0]),int(pos_y_tab[0])),(int(orientation_line[0]),int(orientation_line[1])),color_real, 3)
 		for i in range(np.shape(pos_x_tab)[0]-1):
 			cv2.circle(img,(int(pos_x_tab[i+1]),int(pos_y_tab[i+1])),30,color_real,5)
-			# Add text next to each circle plot
-			text_pos=tuple(map(operator.add,(int(pos_x_tab[i+1]),int(pos_y_tab[i+1])),(40,40)))
+			text_pos=tuple(map(operator.add,(int(pos_x_tab[i+1]),int(pos_y_tab[i+1])),(40,-10)))
 			cv2.putText(img, str(i+1), text_pos, fontFace, fontScale, color_real,thickness=3)
-			#Draw line from one point to an other
 			#cv2.line(img, (int(pos_x_tab[i]),int(pos_y_tab[i])), (int(pos_x_tab[i+1]),int(pos_y_tab[i+1])), color_real, 3) 
-			#Draw orientation of robot
 			orientation_line=tuple(map(operator.add,(pos_x_tab[i+1],pos_y_tab[i+1]),(30*np.cos(orientation_tab[i+1]),30*np.sin(orientation_tab[i+1]))))
 
 			cv2.line(img,(int(pos_x_tab[i+1]),int(pos_y_tab[i+1])),(int(orientation_line[0]),int(orientation_line[1])),color_real, 3)
 
 		### PLOT ESTIMATED DATA
-		cv2.circle(img,(int(estimated_pos_x_tab[0]),int(estimated_pos_y_tab[0])),30,color_estimation,5)
+		cv2.circle(img,(int(self.estimated_pos_x_tab[0]),int(self.estimated_pos_y_tab[0])),30,color_estimation,5)
+		text_pos=tuple(map(operator.add,(int(self.estimated_pos_x_tab[0]),int(self.estimated_pos_y_tab[0])),(40,40)))
+		cv2.putText(img, str(0), text_pos, fontFace, fontScale, color_estimation,thickness=3)
 		#Draw orientation of robot
-		orientation_line=tuple(map(operator.add,(estimated_pos_x_tab[0],estimated_pos_y_tab[0]),(30*np.cos(estimated_orientation_tab[0]),30*np.sin(estimated_orientation_tab[0]))))
-		cv2.line(img,(int(estimated_pos_x_tab[0]),int(estimated_pos_y_tab[0])),(int(orientation_line[0]),int(orientation_line[1])),color_estimation, 3)
+		orientation_line=tuple(map(operator.add,(self.estimated_pos_x_tab[0],self.estimated_pos_y_tab[0]),(30*np.cos(self.estimated_orientation_tab[0]),30*np.sin(self.estimated_orientation_tab[0]))))
+		cv2.line(img,(int(self.estimated_pos_x_tab[0]),int(self.estimated_pos_y_tab[0])),(int(orientation_line[0]),int(orientation_line[1])),color_estimation, 3)
 		# print "np.shape(estimated_pos_x_tab)[0]-1",np.shape(estimated_pos_x_tab)[0]-1
-		for i in range(np.shape(estimated_pos_x_tab)[0]-1):
+		for i in range(np.shape(self.estimated_pos_x_tab)[0]-1):
 			# print "estimated_pos_x_tab[i+1] = ",estimated_pos_x_tab[i+1]
 			# print "estimated_pos_y_tab[i+1] = ",estimated_pos_y_tab[i+1]
 			# print "estimated_orientation_tab[i+1] = ",estimated_orientation_tab[i+1]
-			cv2.circle(img,(int(estimated_pos_x_tab[i+1]),int(estimated_pos_y_tab[i+1])),30,color_estimation,5)
+			cv2.circle(img,(int(self.estimated_pos_x_tab[i+1]),int(self.estimated_pos_y_tab[i+1])),30,color_estimation,5)
 			# Add text next to each circle plot
-			text_pos=tuple(map(operator.add,(int(estimated_pos_x_tab[i+1]),int(estimated_pos_y_tab[i+1])),(40,40)))
+			text_pos=tuple(map(operator.add,(int(self.estimated_pos_x_tab[i+1]),int(self.estimated_pos_y_tab[i+1])),(40,40)))
 			cv2.putText(img, str(i+1), text_pos, fontFace, fontScale, color_estimation,thickness=3)
 			#Draw line from one point to an other
 			#cv2.line(img, (int(estimated_pos_x_tab[i]),int(estimated_pos_y_tab[i])), (int(estimated_pos_x_tab[i+1]),int(estimated_pos_y_tab[i+1])), color_estimation, 3) 
 			#Draw orientation of robot
-			orientation_line=tuple(map(operator.add,(estimated_pos_x_tab[i+1],estimated_pos_y_tab[i+1]),(30*np.cos(estimated_orientation_tab[i+1]),30*np.sin(estimated_orientation_tab[i+1]))))
-			cv2.line(img,(int(estimated_pos_x_tab[i+1]),int(estimated_pos_y_tab[i+1])),(int(orientation_line[0]),int(orientation_line[1])),color_estimation, 3)
+			orientation_line=tuple(map(operator.add,(self.estimated_pos_x_tab[i+1],self.estimated_pos_y_tab[i+1]),(30*np.cos(self.estimated_orientation_tab[i+1]),30*np.sin(self.estimated_orientation_tab[i+1]))))
+			cv2.line(img,(int(self.estimated_pos_x_tab[i+1]),int(self.estimated_pos_y_tab[i+1])),(int(orientation_line[0]),int(orientation_line[1])),color_estimation, 3)
 
 		cv2.imshow("img",img)
 		cv2.waitKey(0)
+
+
 
 # INIT VARIABLES
 frame_x=600
 frame_y=600
 margin_ROI=0.1
 angle=0
-pos_x=0
-pos_y=0
+pos_x=500
+pos_y=500
 scale=1
 
 #Creation object of Class OpticalFlow
 optflow=OpticalFlow(margin_ROI, frame_x, frame_y, angle, pos_x, pos_y, scale) 
 
 #Data
-pos_x_tab=np.array([100,200,300,400,500,600,700,800,900,1000])
-pos_y_tab=np.array([100,200,300,400,500,600,700,800,900,1000])
-orientation_tab=np.array([10,20,30,20,10,0,10,20,30,20])
+#pos_x_tab=np.array([100,200,300,400,500,600,700,800,900,1000])
+#pos_y_tab=np.array([100,200,300,400,500,600,700,800,900,1000])
+pos_x_tab=np.array([500,600,700,800,900,1000,1100,1200,1300,1400])
+pos_y_tab=np.array([500,600,700,800,900,1000,1100,1200,1300,1400])
+orientation_tab=np.array([10,10,10,10,10,10,10,10,10,10],np.float64)
+#orientation_tab=np.array([0,0,0,0,0,0,0,0,0,0],np.float64)
 
-#Run Tets
+
+#Run Test
 optflow.run_test(pos_x_tab, pos_y_tab, orientation_tab)
 
 
