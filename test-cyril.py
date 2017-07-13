@@ -71,7 +71,7 @@ def rigid_transform_3D(A, B, frame_x, frame_y, margin):
     R = np.dot(Vt.T,U.T)
     recenter=centroid_B-[(1-2*margin)/2*frame_x,(1-2*margin)/2*frame_y]
     recenter=np.dot(np.linalg.inv(R),recenter)+[(1-2*margin)/2*frame_x,(1-2*margin)/2*frame_y]
-    t=recenter-centroid_A.T
+    t=-recenter+centroid_A.T
     #t = -R*centroid_A.T + centroid_B.T
     return R, t
 
@@ -105,14 +105,14 @@ img=cv2.imread("Total3.jpg")
 # cv2.destroyAllWindows()
 
 coords_0 = [2000, 2000, 0]
-coords_1 = [2020, 2050, 0]
+coords_1 = [2050, 2050, 0]
 size = 600
 
 # img_0 = img[coords_0[0]:coords_0[0]+size, coords_0[1]:coords_0[1]+size, :]
 # img_1 = img[coords_1[0]:coords_1[0]+size, coords_1[1]:coords_1[1]+size, :]
 
 img_0 = createMovingMask(coords_0[0], coords_0[1], teta=0, scale=1, frame_x=size, frame_y=size)
-img_1 = createMovingMask(coords_1[0], coords_1[1], teta=30, scale=1, frame_x=size, frame_y=size)
+img_1 = createMovingMask(coords_1[0], coords_1[1], teta=10, scale=1, frame_x=size, frame_y=size)
 
 print "np.shape(img_0)",np.shape(img_0)
 print "np.shape(img_1)",np.shape(img_1)
@@ -159,16 +159,16 @@ bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
 matches = bf.knnMatch(des_0, des_1, k=2)
 good = []
 for m,n in matches:
-    if m.distance < 0.4*n.distance:
+    if m.distance < 0.55*n.distance:
         good.append([m])
 
 
-print 'img_0.shape = ', img_0.shape
+# print 'img_0.shape = ', img_0.shape
 
-print len(kp_0), ' features in img_0'
-print len(kp_1), ' features in img_1'
-print len(good), ' features in good'
-print 'type(good) = ', type(good[0][0])
+# print len(kp_0), ' features in img_0'
+# print len(kp_1), ' features in img_1'
+# print len(good), ' features in good'
+# print 'type(good) = ', type(good[0][0])
 
 # ------------------------------------
 # Reorder features according to matches
@@ -180,15 +180,15 @@ for i in range(np.shape(good)[0]):
     coords_reordered_0[i]=feats_0[good[i][0].queryIdx]
     coords_reordered_1[i]=feats_1[good[i][0].trainIdx]
 
-print 'type(coords_reordered_0) = ', type(coords_reordered_0)
-print 'coords_reordered_0.shape = ', coords_reordered_0.shape
-print 'coords_reordered_1.shape = ', coords_reordered_1.shape
+# print 'type(coords_reordered_0) = ', type(coords_reordered_0)
+# print 'coords_reordered_0.shape = ', coords_reordered_0.shape
+# print 'coords_reordered_1.shape = ', coords_reordered_1.shape
 #print "coords_reordered_0 = ",coords_reordered_0
 #print "coords_reordered_1 = ",coords_reordered_1
 
 
 matches_orb=cv2.drawMatchesKnn(img_0,kp_0,img_1,kp_1,good,None,flags=2)
-cv2.imwrite("ORB_test.png",matches_orb)
+cv2.imwrite("ORB_test1.png",matches_orb)
 
 
 # ------------------------------------
@@ -224,20 +224,20 @@ for j in range(np.shape(coords_reordered_0)[0]):
     center_1_write=tuple(map(operator.add,center_1,(2000,2000)))
     cv2.circle(img, center_0_write, 30, (0,255,0), 5)
     cv2.circle(img, center_1_write, 30, (255,255,255), 5)
-    text_j0=tuple(map(operator.add, center_0, (2040,2040)))
+    text_j0=tuple(map(operator.add, center_0, (2050,2050)))
     cv2.putText(img, str(j), (int(text_j0[0]),int(text_j0[1])), fontFace, fontScale1, (0,255,0),thickness=3)
-    text_j1 = tuple(map(operator.add, center_1, (2040,2000-40)))
+    text_j1 = tuple(map(operator.add, center_1, (2050,2000-50)))
     cv2.putText(img, str(j), (int(text_j1[0]),int(text_j1[1])), fontFace, fontScale1, (255,255,255),thickness=3)
 
 #print 'type(coords_reordered_centers_0) = ', type(coords_reordered_centers_0)
 
-cv2.imshow('img_0',img_0)
+#cv2.imshow('img_0',img_0)
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
 
-cv2.imshow('img_1',img_1)
-cv2.waitKey(0)
+#cv2.imshow('img_1',img_1)
+#cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
 
@@ -268,6 +268,54 @@ cv2.imwrite("image_test.png",img)
 
 R, t = rigid_transform_3D(coords_reordered_0, coords_reordered_1, frame_x=600, frame_y=600, margin=0)
 
-print 'R = ', R
-print 'angle =', 180/3.14*(np.arctan2(-R.item([1][0]),R.item([0][0])))
-print 't = ', t
+angle = 180/3.14*(np.arctan2(R.item([1][0]),R.item([0][0])))
+
+
+print "CORRECT : angle=10 / pos_x = 50 / pos_y = 50 / displ_x = 50 / displ_y = 50"
+print 'angle =', angle
+print "translation x = ",t[0]
+print "translation y = ",t[1]
+
+
+
+print "=========================================="
+#TEST SECOND FRAME
+matches=[]
+coords_1=[2050,2050,0]
+coords_2=[2100,2100,0]
+img_1 = createMovingMask(coords_1[0], coords_1[1], teta=10, scale=1, frame_x=size, frame_y=size)
+img_2 = createMovingMask(coords_2[0], coords_2[1], teta=20, scale=1, frame_x=size, frame_y=size)
+
+
+kp_1, des_1 = orb.detectAndCompute(img_1,mask=None)
+feats_1 = formatting(kp_1)
+kp_2, des_2 = orb.detectAndCompute(img_2,mask=None)
+feats_2 = formatting(kp_2)
+
+bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
+matches = bf.knnMatch(des_1, des_2, k=2)
+
+good = []
+for m,n in matches:
+    if m.distance < 0.3*n.distance:
+        good.append([m])
+
+matches_orb=cv2.drawMatchesKnn(img_1,kp_1,img_2,kp_2,good,None,flags=2)
+cv2.imwrite("ORB_test2.png",matches_orb)
+
+coords_reordered_1 = np.zeros((np.shape(good)[0],2))
+coords_reordered_2 = np.zeros((np.shape(good)[0],2))
+for i in range(np.shape(good)[0]):
+    coords_reordered_1[i]=feats_1[good[i][0].queryIdx]
+    coords_reordered_2[i]=feats_2[good[i][0].trainIdx]
+
+R2, t2 = rigid_transform_3D(coords_reordered_1, coords_reordered_2, frame_x=600, frame_y=600, margin=0)
+
+angle+=180/3.14*(np.arctan2(R2.item([1][0]),R2.item([0][0])))
+
+print "CORRECT : angle=20 / pos_x = 100 / pos_y = 100 / displ_x = 50 / displ_y = 50"
+print 'angle =', angle
+print "pos_x = ", t[0]+t2[0]*np.cos(deg2rad(angle))
+print "pos_y = ", t[1]+t2[1]*np.cos(deg2rad(angle))
+print "displ_x = ",t2[0]*np.cos(deg2rad(angle))
+print "displ_y = ",t2[1]*np.cos(deg2rad(angle))
