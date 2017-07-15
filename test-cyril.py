@@ -29,6 +29,45 @@ def tuple2array(tup_le,ret_int):
         arr_ay=[tup_le[0],tup_le[1]]
     return arr_ay
 
+def normalize_array(distance,norm_type="L2", method="inverse"):
+    sum_=0
+    if norm_type=="L2":
+        if method=="euler":
+            weights=np.exp(-distance)
+            for i in range(np.shape(weights)[0]):
+                sum_+=np.power(weights[i],2)
+            sum_=np.sqrt(sum_)
+            weights_norm=weights/sum_
+            return weights_norm
+        elif method =="inverse":
+            weights=1/distance
+            for i in range(np.shape(weights)[0]):
+                sum_+=np.power(weights[i],2)
+            sum_=np.sqrt(sum_)
+            weights_norm=weights/sum_
+            return weights_norm
+        else:
+            print "Wrong method entered. Enter \"inverse\" or \"euler\"."
+            return None
+    elif norm_type=="L1":
+        if method=="euler":
+            weights=np.exp(-distance)
+            sum_=np.sum(weights)
+            weights_norm=weights/sum_
+            return weights_norm
+        elif method =="inverse":
+            weights=1/distance
+            sum_=np.sum(weights)
+            weights_norm=weights/sum_
+            return weights_norm
+        else:
+            print "Wrong method entered. Enter \"inverse\" or \"euler\"."
+            return None
+    else:
+        print "Wrong Normalization Name Input. Enter \"L1\" or \"L2\"."
+        return None
+
+
 # def rigid_transform_3D(A, B, frame_x, frame_y, margin=0):
 #     # DONT CALL WITH 1 FEATURE MATCHED, SUM WILL BE DONE OVER X AND Y instead of all the X and all the Y.
 #     assert len(A) == len(B)
@@ -75,6 +114,31 @@ def rigid_transform_3D(A, B, frame_x, frame_y, margin):
     #t = -R*centroid_A.T + centroid_B.T
     return R, t
 
+
+# source: ETHZ: https://igl.ethz.ch/projects/ARAP/svd_rot.pdf
+def weighted_rigid_transform_3D(A, B,weights, frame_x, frame_y, margin):
+    #weights should be linked to the distance. The shorter the distance is the higher the value is.
+    N = np.shape(A)[0]
+    weight_enlarged=np.matlib.repmat(weights,1,2)
+    centroid_A = np.sum(weight_enlarged*A, axis=0)
+    centroid_B = np.sum(weight_enlarged*B, axis=0)
+    centroid_A = centroid_A / np.sum(weights,0)
+    centroid_B = centroid_B / np.sum(weights,0)
+    AA = A - np.tile(centroid_A, (N, 1))
+    BB = B - np.tile(centroid_B, (N, 1))
+    W = np.diagflat(weights)
+    S = np.dot(np.dot(A.T,W),B)
+    U,S,Vt = np.linalg.svd(S)
+    M=np.shape(U)[0]
+    id_=np.identity(M)
+    id_[M-1,M-1]=np.linalg.det(np.dot(Vt.T,U.T))
+    R=np.dot(np.dot(Vt.T,id_),U.T)
+    recenter=centroid_B-[(1-2*margin)/2*frame_x,(1-2*margin)/2*frame_y]
+    recenter=np.dot(np.linalg.inv(R),recenter)+[(1-2*margin)/2*frame_x,(1-2*margin)/2*frame_y]
+    t=-recenter+centroid_A.T
+
+    return R,t
+
 def createMovingMask(x=0, y=0,teta=0,scale=1, frame_x=300, frame_y=300):
     frame=cv2.imread("Total3.jpg",0)
     (rows,cols)=np.shape(frame)
@@ -114,8 +178,8 @@ size = 600
 img_0 = createMovingMask(coords_0[0], coords_0[1], teta=0, scale=1, frame_x=size, frame_y=size)
 img_1 = createMovingMask(coords_1[0], coords_1[1], teta=40, scale=1, frame_x=size, frame_y=size)
 
-print "np.shape(img_0)",np.shape(img_0)
-print "np.shape(img_1)",np.shape(img_1)
+#print "np.shape(img_0)",np.shape(img_0)
+#print "np.shape(img_1)",np.shape(img_1)
 
 #cv2.imshow('img_0',img_0)
 # cv2.waitKey(0)
@@ -269,22 +333,20 @@ cv2.imwrite("image_test.png",img)
 R, t = rigid_transform_3D(coords_reordered_0, coords_reordered_1, frame_x=600, frame_y=600, margin=0)
 
 angle1 = 180/3.14*(np.arctan2(R.item([1][0]),R.item([0][0])))
-
-
+print "=========================================="
 print "CORRECT : angle=10 / pos_x = 50 / pos_y = 50 / displ_x = 50 / displ_y = 50"
 print 'angle =', angle1
-print "translation x = ",t[0]
-print "translation y = ",t[1]
+print "pos_x = ",t[0]
+print "pos_y = ",t[1]
+print "displ_x = ",t[0]
+print "displ_y = ",t[1]
 
-
-
-print "=========================================="
 #TEST SECOND FRAME
 matches=[]
 coords_1=[2050,2050,0]
 coords_2=[2100,2100,0]
-img_1 = createMovingMask(coords_1[0], coords_1[1], teta=30, scale=1, frame_x=size, frame_y=size)
-img_2 = createMovingMask(coords_2[0], coords_2[1], teta=30, scale=1, frame_x=size, frame_y=size)
+img_1 = createMovingMask(coords_1[0], coords_1[1], teta=40, scale=1, frame_x=size, frame_y=size)
+img_2 = createMovingMask(coords_2[0], coords_2[1], teta=40, scale=1, frame_x=size, frame_y=size)
 
 
 kp_1, des_1 = orb.detectAndCompute(img_1,mask=None)
@@ -305,14 +367,19 @@ cv2.imwrite("ORB_test2.png",matches_orb)
 
 coords_reordered_1 = np.zeros((np.shape(good)[0],2))
 coords_reordered_2 = np.zeros((np.shape(good)[0],2))
+distance=np.zeros((np.shape(good)[0],1))
 for i in range(np.shape(good)[0]):
     coords_reordered_1[i]=feats_1[good[i][0].queryIdx]
     coords_reordered_2[i]=feats_2[good[i][0].trainIdx]
+    distance[i]=good[i][0].distance
 
-R2, t2 = rigid_transform_3D(coords_reordered_1, coords_reordered_2, frame_x=600, frame_y=600, margin=0)
+weights_norm=normalize_array(distance,"L2","inverse")
+
+R2, t2 = weighted_rigid_transform_3D(coords_reordered_1, coords_reordered_2,weights_norm, frame_x=600, frame_y=600, margin=0)
 
 angle2=180/3.14*(np.arctan2(R2.item([1][0]),R2.item([0][0])))
 
+print "=========================================="
 print "CORRECT : angle=20 / pos_x = 100 / pos_y = 100 / displ_x = 50 / displ_y = 50"
 print 'angle =', angle2
 print "pos_x = ", t[0]+t2[0]*np.cos(deg2rad(angle1))
@@ -321,3 +388,4 @@ print "displ_x = ",t2[0]*np.cos(deg2rad(angle1))
 print "displ_y = ",t2[1]*np.cos(deg2rad(angle1))
 
 angle=angle1+angle2
+print "angle total = ", angle
