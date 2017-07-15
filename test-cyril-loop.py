@@ -112,9 +112,9 @@ class OpticalFlow:
 
 	def actualize_pos_orientation(self,R,t):
 		local_angle=np.arctan2(R.item([1][0]),R.item([0][0]))
-		self.angle+=local_angle
 		local_x=t[0]*np.cos(self.angle)
 		local_y=t[1]*np.cos(self.angle)
+		self.angle+=local_angle
 		self.pos_x+=local_x
 		self.pos_y+=local_y
 		return local_x,local_y,local_angle

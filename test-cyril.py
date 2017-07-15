@@ -112,7 +112,7 @@ size = 600
 # img_1 = img[coords_1[0]:coords_1[0]+size, coords_1[1]:coords_1[1]+size, :]
 
 img_0 = createMovingMask(coords_0[0], coords_0[1], teta=0, scale=1, frame_x=size, frame_y=size)
-img_1 = createMovingMask(coords_1[0], coords_1[1], teta=10, scale=1, frame_x=size, frame_y=size)
+img_1 = createMovingMask(coords_1[0], coords_1[1], teta=40, scale=1, frame_x=size, frame_y=size)
 
 print "np.shape(img_0)",np.shape(img_0)
 print "np.shape(img_1)",np.shape(img_1)
@@ -268,11 +268,11 @@ cv2.imwrite("image_test.png",img)
 
 R, t = rigid_transform_3D(coords_reordered_0, coords_reordered_1, frame_x=600, frame_y=600, margin=0)
 
-angle = 180/3.14*(np.arctan2(R.item([1][0]),R.item([0][0])))
+angle1 = 180/3.14*(np.arctan2(R.item([1][0]),R.item([0][0])))
 
 
 print "CORRECT : angle=10 / pos_x = 50 / pos_y = 50 / displ_x = 50 / displ_y = 50"
-print 'angle =', angle
+print 'angle =', angle1
 print "translation x = ",t[0]
 print "translation y = ",t[1]
 
@@ -283,8 +283,8 @@ print "=========================================="
 matches=[]
 coords_1=[2050,2050,0]
 coords_2=[2100,2100,0]
-img_1 = createMovingMask(coords_1[0], coords_1[1], teta=10, scale=1, frame_x=size, frame_y=size)
-img_2 = createMovingMask(coords_2[0], coords_2[1], teta=20, scale=1, frame_x=size, frame_y=size)
+img_1 = createMovingMask(coords_1[0], coords_1[1], teta=30, scale=1, frame_x=size, frame_y=size)
+img_2 = createMovingMask(coords_2[0], coords_2[1], teta=30, scale=1, frame_x=size, frame_y=size)
 
 
 kp_1, des_1 = orb.detectAndCompute(img_1,mask=None)
@@ -297,7 +297,7 @@ matches = bf.knnMatch(des_1, des_2, k=2)
 
 good = []
 for m,n in matches:
-    if m.distance < 0.3*n.distance:
+    if m.distance < 0.4*n.distance:
         good.append([m])
 
 matches_orb=cv2.drawMatchesKnn(img_1,kp_1,img_2,kp_2,good,None,flags=2)
@@ -311,11 +311,13 @@ for i in range(np.shape(good)[0]):
 
 R2, t2 = rigid_transform_3D(coords_reordered_1, coords_reordered_2, frame_x=600, frame_y=600, margin=0)
 
-angle+=180/3.14*(np.arctan2(R2.item([1][0]),R2.item([0][0])))
+angle2=180/3.14*(np.arctan2(R2.item([1][0]),R2.item([0][0])))
 
 print "CORRECT : angle=20 / pos_x = 100 / pos_y = 100 / displ_x = 50 / displ_y = 50"
-print 'angle =', angle
-print "pos_x = ", t[0]+t2[0]*np.cos(deg2rad(angle))
-print "pos_y = ", t[1]+t2[1]*np.cos(deg2rad(angle))
-print "displ_x = ",t2[0]*np.cos(deg2rad(angle))
-print "displ_y = ",t2[1]*np.cos(deg2rad(angle))
+print 'angle =', angle2
+print "pos_x = ", t[0]+t2[0]*np.cos(deg2rad(angle1))
+print "pos_y = ", t[1]+t2[1]*np.cos(deg2rad(angle1))
+print "displ_x = ",t2[0]*np.cos(deg2rad(angle1))
+print "displ_y = ",t2[1]*np.cos(deg2rad(angle1))
+
+angle=angle1+angle2
