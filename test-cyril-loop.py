@@ -20,13 +20,13 @@ class OpticalFlow:
 		self.estimated_pos_y_tab=[]
 		self.estimated_orientation_tab=[]
 
-		feature_params_orb = dict ( nfeatures=50,
+		feature_params_orb = dict ( nfeatures=100,
                             scaleFactor=2,
                             nlevels=5,
-                            edgeThreshold=20, 
+                            edgeThreshold=40, 
                             firstLevel=0, 
                             WTA_K=4, 
-                            patchSize=30
+                            patchSize=60
                             )
 
 		self.orb = cv2.ORB_create(**feature_params_orb)
@@ -114,17 +114,25 @@ class OpticalFlow:
 		local_angle=np.arctan2(R.item([1][0]),R.item([0][0]))
 		local_x=t[0]*np.cos(self.angle)
 		local_y=t[1]*np.cos(self.angle)
-		self.angle+=local_angle
 		self.pos_x+=local_x
 		self.pos_y+=local_y
-		return local_x,local_y,local_angle
+		self.angle+=local_angle
+		
+
+	def local2global(self,local_x, local_y, global_teta=0, global_position_frame_x=0, global_position_frame_y=0):
+	    # local_x/y: position of feature in frame referential
+	    # global_teta: total angle of the frame (global referential)
+	    # position_frame_x/y: position of the top-left corner of the frame regarding the total displacement (global referential)
+	    global_x=global_position_frame_x+np.sqrt(np.power(local_x,2)+np.power(local_y,2))*np.sin(np.arctan2(local_x,local_y)-self.deg2rad(global_teta))
+	    global_y=global_position_frame_y+np.sqrt(np.power(local_x,2)+np.power(local_y,2))*np.cos(np.arctan2(local_x,local_y)-self.deg2rad(global_teta))
+	    return global_x, global_y
 
 	def create_dataframe(self, pos_x=0, pos_y=0, angle=0):
 		frame=cv2.imread("Total3.jpg",0)
 		(rows,cols)=np.shape(frame)
 		#angle need to be in degree
 		M=cv2.getRotationMatrix2D((pos_x+self.frame_x/2,pos_y+self.frame_y/2), self.rad2deg(angle), self.scale)
-		frame=cv2.warpAffine(frame,M,(rows,cols))
+		frame=cv2.warpAffine(frame,M,(cols,rows))
 		mask=frame[pos_y:pos_y+self.frame_y,pos_x:pos_x+self.frame_x]
 		return mask
 
@@ -151,11 +159,9 @@ class OpticalFlow:
 				self.estimating(i)
 			else:
 				R,t=self.AffineTransform(matched_0, matched_1)
-				local_x,local_y,local_angle=self.actualize_pos_orientation(R,t)
-				print "---------------"
-				print "local_x (DISPLACEMENT fbf)",local_x
-				print "local_y (DISPLACEMENT fbf)",local_y
-				print "local_angle (DISPLACEMENT fbf)",self.rad2deg(local_angle)
+				new_t=self.local2global(t[0],t[1],self.angle,0,0)
+				self.actualize_pos_orientation(R,new_t)
+			print "---------------"
 			print "self.pos_x (TOTAL DISPLACEMENT) = ",self.pos_x
 			print "self.pos_y (TOTAL DISPLACEMENT) = ",self.pos_y
 			print "self.angle (TOTAL DISPLACEMENT) = ",self.rad2deg(self.angle)
@@ -251,7 +257,7 @@ optflow=OpticalFlow(margin_ROI, frame_x, frame_y, angle, pos_x, pos_y, scale)
 
 pos_x_tab=np.array([2000,2050,2100,2150])
 pos_y_tab=np.array([2000,2050,2100,2150])
-orientation_tab=np.array([0,30,30,0],np.float64)
+orientation_tab=np.array([0,30,30,20],np.float64)
 
 # Convertion to rad!
 orientation_tab*=np.tile(3.14/180,np.shape(orientation_tab)[0])
