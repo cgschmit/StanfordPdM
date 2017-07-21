@@ -160,10 +160,20 @@ class OpticalFlow:
 				R,t=self.AffineTransform(matched_0, matched_1)
 				print t[0]
 				print t[1]
-				print self.angle
+				print self.rad2deg(self.angle)
 				new_t=self.local2global(t[0],t[1],self.angle,0,0)
-				self.actualize_pos_orientation(R,new_t)
+
+				local_angle=np.arctan2(R.item([1][0]),R.item([0][0]))
+				local_x=new_t[0]*np.cos(self.angle)
+				local_y=new_t[1]*np.cos(self.angle)
+				self.angle+=local_angle
+				self.pos_x+=local_x
+				self.pos_y+=local_y
+
+				#self.actualize_pos_orientation(R,new_t)
 			print "---------------"
+			print "new_t[0] = ",new_t[0]
+			print "new_t[1] = ",new_t[1]
 			print "self.pos_x (TOTAL DISPLACEMENT) = ",self.pos_x
 			print "self.pos_y (TOTAL DISPLACEMENT) = ",self.pos_y
 			print "self.angle (TOTAL DISPLACEMENT) = ",self.rad2deg(self.angle)

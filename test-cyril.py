@@ -194,8 +194,8 @@ img_1 = createMovingMask(coords_1[0], coords_1[1], 10, scale=1, frame_x=size, fr
 #print "np.shape(img_1)",np.shape(img_1)
 
 # cv2.imshow('img_0',img_0)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
+# # cv2.waitKey(0)
+# # cv2.destroyAllWindows()
 
 # cv2.imshow('img_1',img_1)
 # cv2.waitKey(0)
