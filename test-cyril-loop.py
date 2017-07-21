@@ -118,7 +118,6 @@ class OpticalFlow:
 		self.pos_y+=local_y
 		self.angle+=local_angle
 		
-
 	def local2global(self,local_x, local_y, global_teta=0, global_position_frame_x=0, global_position_frame_y=0):
 	    # local_x/y: position of feature in frame referential
 	    # global_teta: total angle of the frame (global referential)
@@ -159,6 +158,9 @@ class OpticalFlow:
 				self.estimating(i)
 			else:
 				R,t=self.AffineTransform(matched_0, matched_1)
+				print t[0]
+				print t[1]
+				print self.angle
 				new_t=self.local2global(t[0],t[1],self.angle,0,0)
 				self.actualize_pos_orientation(R,new_t)
 			print "---------------"
@@ -257,7 +259,7 @@ optflow=OpticalFlow(margin_ROI, frame_x, frame_y, angle, pos_x, pos_y, scale)
 
 pos_x_tab=np.array([2000,2050,2100,2150])
 pos_y_tab=np.array([2000,2050,2100,2150])
-orientation_tab=np.array([0,30,30,20],np.float64)
+orientation_tab=np.array([0,30,20,10],np.float64)
 
 # Convertion to rad!
 orientation_tab*=np.tile(3.14/180,np.shape(orientation_tab)[0])

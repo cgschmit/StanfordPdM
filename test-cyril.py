@@ -154,16 +154,6 @@ def createMovingMask(x=0, y=0,teta=0,scale=1, frame_x=300, frame_y=300,i=0):
     # cv2.imwrite("debug/2_mask_after_rot"+str(i)+".jpg",mask_rotated)
 
     mask_rotated=frame_rotated[y:y+frame_y,x:x+frame_x]    
-
-    ### TEST FUNCTION IS WORKING!
-    # local_x,local_y=global2local(x+frame_x/2,y+frame_y/2,teta,x,y)
-    # print local_x
-    # print local_y
-    #cv2.circle(mask_rotated,(int(frame_x/2),int(frame_y/2)),30,(255,255,255),5)
-    #cv2.circle(mask_rotated,(int(frame_x/2+local_x),int(frame_y/2+local_y)),30,(255,255,255),5)
-    #cv2.imshow("YOLO",mask_rotated)
-    #cv2.waitKey(0)
-    ### END TEST FUNCTION IS WORKING!
     
     return mask_rotated
 
@@ -357,6 +347,7 @@ cv2.imwrite("image_test.png",img)
 R, t = rigid_transform_3D(coords_reordered_0, coords_reordered_1, frame_x=600, frame_y=600, margin=0)
 
 new_t=local2global(t[0],t[1],0,0,0)
+print "HEREEEEEE",new_t
 
 angle1 = 180/3.14*(np.arctan2(R.item([1][0]),R.item([0][0])))
 
@@ -367,6 +358,19 @@ print "pos_x = ",new_t[0]
 print "pos_y = ",new_t[1]
 print "displ_x = ",new_t[0]
 print "displ_y = ",new_t[1]
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -418,10 +422,6 @@ for i in range(np.shape(good)[0]):
     coords_reordered_2[i]=feats_2[good[i][0].trainIdx]
     distance[i]=good[i][0].distance
 
-weights_norm=normalize_array(distance,"L2","euler")
-
-#R2, t2 = weighted_rigid_transform_3D(coords_reordered_1, coords_reordered_2,weights_norm, frame_x=600, frame_y=600, margin=0)
-
 R2, t2 = rigid_transform_3D(coords_reordered_1, coords_reordered_2, frame_x=600, frame_y=600, margin=0)
 
 new_t2=local2global(t2[0],t2[1],angle1,0,0)
@@ -442,6 +442,25 @@ print "angle total = ", angle2
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #TEST THIRD FRAME
 feature_params_orb = dict ( nfeatures=50,
                             scaleFactor=2,
@@ -459,9 +478,9 @@ matches=[]
 size=600
 coords_2=[2150,2150,0]
 coords_3=[2200,2200,0]
-img_2 = createMovingMask(coords_1[0], coords_1[1], teta=20, scale=1, frame_x=size, frame_y=size)
+img_2 = createMovingMask(coords_2[0], coords_2[1], teta=20, scale=1, frame_x=size, frame_y=size)
 #cv2.imshow("img_1",img_1)
-img_3 = createMovingMask(coords_2[0], coords_2[1], teta=10, scale=1, frame_x=size, frame_y=size)
+img_3 = createMovingMask(coords_3[0], coords_3[1], teta=10, scale=1, frame_x=size, frame_y=size)
 #cv2.imshow("img_2",img_2)
 #cv2.waitKey(0)
 
@@ -503,10 +522,93 @@ print "=========================================="
 print "CORRECT : total_angle= 10 / angle=10 / pos_x = 200 / pos_y = 200 / displ_x = 50 / displ_y = 50"
 print 'angle =', angle3
 #print t2
-print "pos_x = ", new_t[0]+new_t2[0]*np.cos(deg2rad(angle1))+new_t2[0]*np.cos(deg2rad(angle2))
-print "pos_y = ", new_t[1]+new_t2[1]*np.cos(deg2rad(angle1))+new_t2[1]*np.cos(deg2rad(angle2))
+print "pos_x = ", new_t[0]+new_t2[0]*np.cos(deg2rad(angle1))+new_t3[0]*np.cos(deg2rad(angle2))
+print "pos_y = ", new_t[1]+new_t2[1]*np.cos(deg2rad(angle1))+new_t3[1]*np.cos(deg2rad(angle2))
 print "displ_x = ",new_t3[0]*np.cos(deg2rad(angle2))
 print "displ_y = ",new_t3[1]*np.cos(deg2rad(angle2))
 
 angle3=angle2+angle3
 print "angle total = ", angle3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#TEST FOURTH FRAME
+feature_params_orb = dict ( nfeatures=50,
+                            scaleFactor=2,
+                            nlevels=5,
+                            edgeThreshold=20,
+                            firstLevel=0,
+                            WTA_K=4,
+                            patchSize=60
+                            )
+
+orb = cv2.ORB_create(**feature_params_orb)
+
+matches=[]
+size=600
+coords_3=[2200,2200,0]
+coords_4=[2300,2300,0]
+img_3 = createMovingMask(coords_3[0], coords_3[1], teta=10, scale=1, frame_x=size, frame_y=size)
+#cv2.imshow("img_1",img_1)
+img_4 = createMovingMask(coords_4[0], coords_4[1], teta=30, scale=1, frame_x=size, frame_y=size)
+#cv2.imshow("img_2",img_2)
+#cv2.waitKey(0)
+
+kp_3, des_3 = orb.detectAndCompute(img_3,mask=None)
+feats_2 = formatting(kp_3)
+kp_4, des_4 = orb.detectAndCompute(img_4,mask=None)
+feats_4 = formatting(kp_4)
+
+bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
+matches = bf.knnMatch(des_3, des_4, k=2)
+
+good = []
+for m,n in matches:
+    if m.distance < 0.6*n.distance:
+        good.append([m])
+
+matches_orb=cv2.drawMatchesKnn(img_3,kp_3,img_4,kp_4,good,None,flags=2)
+cv2.imwrite("ORB_test4.png",matches_orb)
+
+coords_reordered_3 = np.zeros((np.shape(good)[0],2))
+coords_reordered_4 = np.zeros((np.shape(good)[0],2))
+distance=np.zeros((np.shape(good)[0],1))
+for i in range(np.shape(good)[0]):
+    coords_reordered_3[i]=feats_3[good[i][0].queryIdx]
+    coords_reordered_4[i]=feats_4[good[i][0].trainIdx]
+    distance[i]=good[i][0].distance
+
+weights_norm=normalize_array(distance,"L2","euler")
+
+#R2, t2 = weighted_rigid_transform_3D(coords_reordered_1, coords_reordered_2,weights_norm, frame_x=600, frame_y=600, margin=0)
+
+R4, t4 = rigid_transform_3D(coords_reordered_3, coords_reordered_4, frame_x=600, frame_y=600, margin=0)
+
+new_t4=local2global(t4[0],t4[1],angle3,0,0)
+
+angle4=180/3.14*(np.arctan2(R4.item([1][0]),R4.item([0][0])))
+
+print "=========================================="
+print "CORRECT : total_angle= 10 / angle=10 / pos_x = 200 / pos_y = 200 / displ_x = 50 / displ_y = 50"
+print 'angle =', angle4
+#print t2
+print "pos_x = ", new_t[0]+new_t2[0]*np.cos(deg2rad(angle1))+new_t3[0]*np.cos(deg2rad(angle2))+new_t4[0]*np.cos(deg2rad(angle3))
+print "pos_y = ", new_t[1]+new_t2[1]*np.cos(deg2rad(angle1))+new_t3[1]*np.cos(deg2rad(angle2))+new_t4[1]*np.cos(deg2rad(angle3))
+print "displ_x = ",new_t4[0]*np.cos(deg2rad(angle3))
+print "displ_y = ",new_t4[1]*np.cos(deg2rad(angle3))
+
+angle4=angle3+angle4
+print "angle total = ", angle4
+
