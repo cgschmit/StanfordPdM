@@ -317,7 +317,7 @@ coords_reordered_1_global=applyRotationTo(coords_reordered_1, size, size, 40, x=
 # cv2.destroyAllWindows()
 
 
-cv2.imwrite("image_test.png",img)
+# cv2.imwrite("image_test.png",img)
 
 
 # ------------------------------------

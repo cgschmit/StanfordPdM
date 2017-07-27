@@ -75,9 +75,9 @@ class OpticalFlow:
 		outlier_ratio=0.2 #experimental value
 		prob_success=0.99 #probability that one 
 		number_sample=3
-		number_trials=int(np.rint(np.log(1-prob_success)/np.log(1-np.power((1-outlier_ratio),number_sample)))) #formula RANSAC
-
+		number_trials=int(np.ceil(np.log(1-prob_success)/np.log(1-np.power((1-outlier_ratio),number_sample)))) #formula RANSAC
 		init=True
+		print "number_trials = ",number_trials
 
 		for i in range(number_trials):
 			idx=np.asarray(list(range(np.shape(A)[0])))
@@ -152,10 +152,10 @@ class OpticalFlow:
 		local_angle=np.arctan2(R.item([1][0]),R.item([0][0]),dtype=np.float64)
 		print "########################################"
 		print "INCREMENT ANGLE = ",self.rad2deg(local_angle)
-		print "INCREMENT X = ",global_x_est*np.cos(self.angle,dtype=np.float64)
-		print "INCREMENT Y = ",global_y_est*np.cos(self.angle,dtype=np.float64)
-		self.pos_x+=global_x_est*np.cos(self.angle,dtype=np.float64)
-		self.pos_y+=global_y_est*np.cos(self.angle,dtype=np.float64)
+		print "INCREMENT X = ",global_x_est#*np.cos(self.angle,dtype=np.float64)
+		print "INCREMENT Y = ",global_y_est#*np.cos(self.angle,dtype=np.float64)
+		self.pos_x+=global_x_est#*np.cos(self.angle,dtype=np.float64)
+		self.pos_y+=global_y_est#*np.cos(self.angle,dtype=np.float64)
 		self.angle+=local_angle
 		return
 
@@ -175,9 +175,6 @@ class OpticalFlow:
 
 			matches_orb=cv2.drawMatchesKnn(img_0,kp_0,img_1,kp_1,good,None,flags=2)
 			cv2.imwrite("ORB_matching"+str(i)+".png",matches_orb)
-
-			matches_orb=cv2.drawMatchesKnn(img_0,kp_0,img_1,kp_1,good,None,flags=2)
-			cv2.imwrite("debug/ORB_test"+str(i)+".png",matches_orb)
 
 			#R, t = self.affineTransform(feats_ordered_0, feats_ordered_1)
 			R, t = self.filterAffineTransform(feats_ordered_0, feats_ordered_1)
@@ -267,7 +264,7 @@ global_orientation_tab=np.array([0,10,20,30,20,10],np.float64)
 # global_orientation_tab=np.array([0,5,10,7,14,17,20,25,35,30,25,30,20,25,18,10,5,0,5,7],np.float64)
 
 # Convertion to rad!
-global_orientation_tab*=np.tile(3.14/180,np.shape(global_orientation_tab)[0])
+global_orientation_tab*=np.tile(math.pi/180,np.shape(global_orientation_tab)[0])
 
 # Run Test
 optflow.run_test(global_x_tab, global_y_tab, global_orientation_tab)
