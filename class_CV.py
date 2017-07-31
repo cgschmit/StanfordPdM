@@ -34,7 +34,7 @@ class OpticalFlow:
 		self.orb = cv2.ORB_create(**feature_params_orb)
 
 	def createFrame(self, x, y, teta):
-		frame=cv2.imread("Total1.jpg",0)
+		frame=cv2.imread("Total5.jpg",0)
 		(rows,cols)=np.shape(frame)
 		#Rotation of image
 		M=cv2.getRotationMatrix2D((x+self.frame_x/2,y+self.frame_y/2), self.rad2deg(teta), self.scale)
@@ -70,14 +70,13 @@ class OpticalFlow:
 			coords_reordered_1[i]=feats_1[good[i][0].trainIdx]
 		return coords_reordered_0, coords_reordered_1, good
 
-	def filterAffineTransform(self, A, B):
+	def filterAffineTransform(self, A, B, method="RANSAC"):
 		### Select the training features (to calculate R and t)
 		outlier_ratio=0.2 #experimental value
 		prob_success=0.99 #probability that one 
 		number_sample=3
 		number_trials=int(np.ceil(np.log(1-prob_success)/np.log(1-np.power((1-outlier_ratio),number_sample)))) #formula RANSAC
 		init=True
-		print "number_trials = ",number_trials
 
 		for i in range(number_trials):
 			idx=np.asarray(list(range(np.shape(A)[0])))
@@ -96,28 +95,56 @@ class OpticalFlow:
 
 			### Call affineTransform
 			R,t=self.affineTransform(A_rand,B_rand)
-			#B_estimated=np.dot(np.linalg.inv(R),A_test.T)-np.tile(t.T,((np.shape(A_test)[0]),1)).T
-			B_estimated=np.dot(R,A_test.T)-np.tile(t.T,((np.shape(A_test)[0]),1)).T
-			B_estimated=B_estimated.T
+			
+			# B TO A
+			vecto_r=B_test-np.tile([self.frame_x/2,self.frame_y/2],(np.shape(B_test)[0],1))
+			A_estimated=np.dot(np.linalg.inv(R),vecto_r.T)
+			A_estimated=A_estimated.T+np.tile(t,(np.shape(B_test)[0],1))+np.tile([self.frame_x/2,self.frame_y/2],(np.shape(A_test)[0],1))
 
-			### Calculate distance from point B_test to B_estimated, if within a predefined distance, include as inlier,if not outlier. Count inlier.
-			distances=np.sqrt(np.power(B_test[:,0]-B_estimated[:,0],2)+np.power(B_test[:,1]-B_estimated[:,1],2))
-			total_distance=np.sum(distances)
-			print total_distance
 
-			if init:
-				best_total_distance=total_distance
-				R_best=R
-				t_best=t
-				init=False
-		
-			if total_distance<best_total_distance:
-				R_best=R
-				t_best=t
-				best_total_distance=total_distance
+			distances=np.sqrt(np.power(A_test[:,0]-A_estimated[:,0],2)+np.power(A_test[:,1]-A_estimated[:,1],2))
+			
+			# METHOD 1
+			# Choose the R, t minimizing total distance after projection
+			if method == "distance":
+				total_distance=np.sum(distances)			
+				if init:
+					best_total_distance=total_distance
+					R_best=R
+					t_best=t
+					init=False
+					A_test_best=A_test
+					A_estimated_best=A_estimated
+
+				if total_distance<best_total_distance:
+					R_best=R
+					t_best=t
+					best_total_distance=total_distance
+					A_test_best=A_test
+					A_estimated_best=A_estimated
+
+			# METHOD 2
+			# Choose the R, t that maximize the total number of inlier.
+			elif method == "RANSAC":
+				counter=0
+				for j in range(np.shape(A_test)[0]):
+					if distances[j]<2: #Test value, can be changed to anything. In px ! The smaller, the more accurate.
+						counter+=1
+				if init:
+					best_counter=counter
+					R_best=R
+					t_best=t
+					init=False
+					A_test_best=A_test
+					A_estimated_best=A_estimated
+				if counter>best_counter:
+					best_counter=counter
+					R_best=R
+					t_best=t
+					A_test_best=A_test
+					A_estimated_best=A_estimated
 
 		return R_best, t_best
-
 
 	def affineTransform(self, A, B):
 		assert len(A) == len(B)
@@ -134,6 +161,68 @@ class OpticalFlow:
 		recenter=np.dot(np.dot(U.T,Vt.T),recenter)+[(1-2*self.margin)/2*self.frame_x,(1-2*self.margin)/2*self.frame_y]
 		t=-recenter+centroid_A.T
 		return R, t
+
+	def weightedAffineTransform(self, A, B, distance, norm_type="L2", method="inverse"):
+		# source: ETHZ: https://igl.ethz.ch/projects/ARAP/svd_rot.pdf
+		sum_=0
+		if norm_type=="L2":
+			if method=="euler":
+				weights=np.exp(-distance/100)
+				for i in range(np.shape(weights)[0]):
+					sum_+=np.power(weights[i],2)
+				sum_=np.sqrt(sum_)
+				weights_norm=weights/sum_
+				weights=weights_norm
+			elif method =="inverse":
+				# TO AVOID SINGULARITY WITH DISTANCE==0, WE ADDED +0.05
+				weights=1/(distance+0.05)
+				for i in range(np.shape(weights)[0]):
+					sum_+=np.power(weights[i],2)
+				sum_=np.sqrt(sum_)
+				weights_norm=weights/sum_
+				weights=weights_norm
+		elif norm_type=="L1":
+			if method=="euler":
+				weights=np.exp(-distance/100)
+				sum_=np.sum(weights)
+				weights_norm=weights/sum_
+				weights=weights_norm
+			elif method =="inverse":
+				weights=1/(distance+0.05)
+				sum_=np.sum(weights)
+				weights_norm=weights/sum_
+				weights=weights_norm
+
+		N = np.shape(A)[0]
+		weight_enlarged=np.matlib.repmat(weights,1,2)
+		centroid_A = np.sum(weight_enlarged*A, axis=0)
+		centroid_B = np.sum(weight_enlarged*B, axis=0)
+		centroid_A = centroid_A / np.sum(weights,0)
+		centroid_B = centroid_B / np.sum(weights,0)
+		AA = A - np.tile(centroid_A, (N, 1))
+		BB = B - np.tile(centroid_B, (N, 1))
+		W = np.diagflat(weights)
+		S = np.dot(np.dot(A.T,W),B)
+		U,S,Vt = np.linalg.svd(S)
+		M=np.shape(U)[0]
+		id_=np.identity(M)
+		#id_[M-1,M-1]=np.linalg.det(np.dot(Vt.T,U.T))
+		R=np.dot(np.dot(Vt.T,id_),U.T)
+		recenter=centroid_B-[(1-2*margin)/2*frame_x,(1-2*margin)/2*frame_y]
+		recenter=np.dot(np.linalg.inv(R),recenter)+[(1-2*margin)/2*frame_x,(1-2*margin)/2*frame_y]
+		t=-recenter+centroid_A.T
+
+		return R,t
+
+	def affineTransform3d(self,A, B):
+		#Perform getAffineTransform of two vertices to get scale, orientation, translation with the openCV function
+		M=cv2.getAffineTransform(A, B)
+		t=np.array([M[0][2],M[1][2]])
+		s_x=np.sqrt(np.power(M[0][0],2)+np.power(M[1][0],2))
+		s_y=np.sqrt(np.power(M[0][1],2)+np.power(M[1][1],2))
+		s=np.array([[s_x,0],[0,s_y]])
+		R=np.array([[M[0][0]/s_x,M[0][1]/s_y],[M[1][0]/s_x,M[1][1]/s_y]])
+		return R,s,t
 
 	def local2global(self, t, pos_frame_global_x=0, pos_frame_global_y=0):
 		global_x_est=pos_frame_global_x+np.sqrt(np.power(t[0],2,dtype=np.float64)+np.power(t[1],2,dtype=np.float64),dtype=np.float64)*np.sin(np.arctan2(t[0],t[1])-self.angle,dtype=np.float64)
@@ -152,10 +241,10 @@ class OpticalFlow:
 		local_angle=np.arctan2(R.item([1][0]),R.item([0][0]),dtype=np.float64)
 		print "########################################"
 		print "INCREMENT ANGLE = ",self.rad2deg(local_angle)
-		print "INCREMENT X = ",global_x_est#*np.cos(self.angle,dtype=np.float64)
-		print "INCREMENT Y = ",global_y_est#*np.cos(self.angle,dtype=np.float64)
-		self.pos_x+=global_x_est#*np.cos(self.angle,dtype=np.float64)
-		self.pos_y+=global_y_est#*np.cos(self.angle,dtype=np.float64)
+		print "INCREMENT X = ",global_x_est
+		print "INCREMENT Y = ",global_y_est
+		self.pos_x+=global_x_est
+		self.pos_y+=global_y_est
 		self.angle+=local_angle
 		return
 
@@ -171,7 +260,7 @@ class OpticalFlow:
 			kp_0,des_0,feats_0 = self.extractingFeatures_ORB(img_0)
 			kp_1,des_1,feats_1 = self.extractingFeatures_ORB(img_1)
 
-			feats_ordered_0, feats_ordered_1, good = self.featureMatching(des_0, des_1, feats_0, feats_1, featureMatchingSensitivity=0.55)
+			feats_ordered_0, feats_ordered_1, good = self.featureMatching(des_0, des_1, feats_0, feats_1, featureMatchingSensitivity=0.35)
 
 			matches_orb=cv2.drawMatchesKnn(img_0,kp_0,img_1,kp_1,good,None,flags=2)
 			cv2.imwrite("ORB_matching"+str(i)+".png",matches_orb)
@@ -195,8 +284,55 @@ class OpticalFlow:
 
 		self.plot_visualization(global_x_tab,global_y_tab,global_orientation_tab, estimated_pos_x_tab, estimated_pos_y_tab, estimated_orientation_tab)
 
+	def pixel2meters(self, len_sensor_x, len_sensor_y, focal_length, scale_variation):
+		#TO DO !!!!
+		D_D=scale_variation
+		tan_alpha=D_X/(2*D_D)
+
+		return meters_x, meters_y
+
+	def run(self, camera_name):
+		estimated_pos_x_tab=[]
+		estimated_pos_y_tab=[]
+		estimated_orientation_tab=[]
+
+		cap=cv2.VideoCapture(camera_name)
+		ret, img_0=cap.read()
+		while(cap.isOpened()):
+			ret, img_1=cap.read()
+			if ret:
+				kp_0,des_0,feats_0 = self.extractingFeatures_ORB(img_0)
+				kp_1,des_1,feats_1 = self.extractingFeatures_ORB(img_1)
+
+				feats_ordered_0, feats_ordered_1, good = self.featureMatching(des_0, des_1, feats_0, feats_1, featureMatchingSensitivity=0.3)
+
+				matches_orb=cv2.drawMatchesKnn(img_0,kp_0,img_1,kp_1,good,None,flags=2)
+				cv2.imwrite("ORB_matching"+str(i)+".png",matches_orb)
+
+				#R, t = self.affineTransform(feats_ordered_0, feats_ordered_1)
+				R, t = self.filterAffineTransform(feats_ordered_0, feats_ordered_1)
+
+				global_x_est, global_y_est=self.local2global(t)
+
+				self.update(R, global_x_est, global_y_est)
+
+				
+				print "GLOBAL ANGLE = ",self.rad2deg(self.angle)
+				print "GLOBAL POS X = ",self.pos_x
+				print "GLOBAL POS Y = ",self.pos_y
+				print "########################################"
+
+				estimated_pos_x_tab.append(self.pos_x)
+				estimated_pos_y_tab.append(self.pos_y)
+				estimated_orientation_tab.append(self.angle)
+
+				#Reattribution of img_0 <- img_1
+				img_0=img_1
+			else:
+				print "End of file OR error in reading video's frame"
+
 	def plot_visualization(self, pos_x_tab,pos_y_tab,orientation_tab,estimated_pos_x_tab,estimated_pos_y_tab,estimated_orientation_tab):
-		img=cv2.imread("Total1.jpg",1)
+		img=cv2.imread("Total5.jpg",1)
 		fontFace=cv2.FONT_HERSHEY_SIMPLEX
 		fontScale=1.5
 
@@ -232,9 +368,77 @@ class OpticalFlow:
 			orientation_line=tuple(map(operator.add,(estimated_pos_x_tab[i+1],estimated_pos_y_tab[i+1]),(30*np.cos(estimated_orientation_tab[i+1]),30*np.sin(estimated_orientation_tab[i+1]))))
 			cv2.line(img,(int(np.rint(estimated_pos_x_tab[i+1])),int(np.rint(estimated_pos_y_tab[i+1]))),(int(np.rint(orientation_line[0])),int(np.rint(orientation_line[1]))),color_estimation, 3)
 
-		cv2.imwrite("result1.png",img)
+		cv2.imwrite("result5.png",img)
 		cv2.imshow("img",img)
 		cv2.waitKey(0)
+
+	###################
+	# TESTING FUNCTION
+	###################
+
+	# def test_feature_extractor_descriptor(self):
+
+
+	# 	return
+
+	# def test_feature_matching(self):
+
+
+	# 	return
+
+	def test_affine_transform(self, which_tag="regular"):
+		#test regular, weighted, openCV one
+
+		if which_tag=="regular":
+			A=np.array([(10,10),(15,11),(13,13)],np.float32)
+			B=self.applyRotationTo(A,0,0,0,0,10) #Apply rotation of 10
+			B=B+np.array([(10,10),(10,10),(10,10)],np.float32) #Apply translation of x=10 and y=10
+
+			R,t=self.affineTransform(self,A,B)
+
+			print "==================================================="
+			print "Result should be: angle=10, x=10, y=10"
+			print "angle = ", self.rad2deg(np.arctan2(R.item([1][0]),R.item([0][0]),dtype=np.float64))
+			print "x = ", t[0]
+			print "y = ". t[1]
+			print "==================================================="
+
+		elif which_tag=="weighted":
+			A=np.array([(10,10),(15,11),(13,13)],np.float32)
+			B=self.applyRotationTo(A,0,0,0,0,10) #Apply rotation of 10
+			B=B+np.array([(10,10),(10,10),(10,10)],np.float32) #Apply translation of x=10 and y=10
+			distance=np.array([[10],[4],[1]],np.float32) #distance computed when the feature matching is done. Correspond of the "error" between two descriptor.
+
+			R,t=self.weightedAffineTransform(A, B, distance, norm_type="L2", method="inverse")
+
+			print "==================================================="
+			print "Result should be: angle=10, x=10, y=10"
+			print "angle = ", self.rad2deg(np.arctan2(R.item([1][0]),R.item([0][0]),dtype=np.float64))
+			print "x = ", t[0]
+			print "y = ". t[1]
+			print "==================================================="
+
+		elif which_tag=="with_scale":
+			A=np.array([(10,10),(15,11),(13,13)],np.float32)
+			B=A*1.2 #Apply scaling of +20%
+			B=self.applyRotationTo(A,0,0,0,0,10) #Apply rotation of 10
+			B=B+np.array([(10,10),(10,10),(10,10)],np.float32) #Apply translation of x=10 and y=10
+
+			R,t,s=self.affineTransform3d(A, B)
+
+			print "Result should be: angle=10, x=10, y=10, scaling=1.2"
+			print "==================================================="
+			print "angle = ", self.rad2deg(np.arctan2(R.item([1][0]),R.item([0][0]),dtype=np.float64))
+			print "x = ", t[0]
+			print "y = ", t[1]
+			print "scaling = ",s[0][0]
+			print "==================================================="
+
+		return
+
+
+
+
 
 # INIT VARIABLES FOR "OpticalFlow" CLASS
 frame_x_size=1200.0
@@ -244,34 +448,25 @@ global_orientation=0.0
 global_x=4000.0
 global_y=2400.0
 scale=1.0
+global_x_tab=np.array([4000,3900,3800,3200,2800,3000],np.float64)
+global_y_tab=np.array([2400,2200,2000,1800,1600,1400],np.float64)
+global_orientation_tab=np.array([0,40,20,50,90,10],np.float64)
+# global_x_tab=np.array([3900,4000],np.float64)
+# global_y_tab=np.array([2300,2400],np.float64)
+# global_orientation_tab=np.array([0,10],np.float64)
+
+global_orientation_tab*=np.tile(math.pi/180,np.shape(global_orientation_tab)[0])
 
 # Creation object of Class OpticalFlow
 optflow=OpticalFlow(margin_ROI, frame_x_size, frame_y_size, global_orientation, global_x, global_y, scale) 
 
-# Test with size = 600
-# global_x_tab=np.array([2000,2040,2080,2120,2160,2200],np.float64)
-# global_y_tab=np.array([2000,2040,2080,2120,2160,2200],np.float64)
-# global_orientation_tab=np.array([0,10,20,30,20,10],np.float64)
-
-# Test start top Right corner
-global_x_tab=np.array([4000,3800,3600,3400,3200,3000],np.float64)
-global_y_tab=np.array([2400,2200,2000,1800,1600,1400],np.float64)
-global_orientation_tab=np.array([0,10,20,30,20,10],np.float64)
-
-# Test with size = 1200
-# global_x_tab=np.array([ 500, 700,1000,1300,1500,1700,1800,2000,2000,2500,2700,2800,2900,3100,2900,2500,2000,1800,1500,1200],np.float64)
-# global_y_tab=np.array([1000,1000,1000,1500,2000,2200,2200,2100,2000,1800,1500,1200,1200, 800, 500, 500, 600, 700, 800,1000],np.float64)
-# global_orientation_tab=np.array([0,5,10,7,14,17,20,25,35,30,25,30,20,25,18,10,5,0,5,7],np.float64)
-
-# Convertion to rad!
-global_orientation_tab*=np.tile(math.pi/180,np.shape(global_orientation_tab)[0])
-
-# Run Test
+# Run test 
 optflow.run_test(global_x_tab, global_y_tab, global_orientation_tab)
 
-print "Increment Angle:   5 /   2 /   3 /   5 /  -5"
-print "Increment Pos X: 200 / 300 / 300 / 200 / 200"
-print "Increment Pos Y:   0 /   0 / 500 / 500 / 200"
+# Run test Affine Transform
+#optflow.test_affine_transform(which_tag="regular")
+#optflow.test_affine_transform(which_tag="weighted")
+#optflow.test_affine_transform(which_tag="with_scale")
 
 
 
@@ -279,6 +474,4 @@ print "Increment Pos Y:   0 /   0 / 500 / 500 / 200"
 # B=np.array([[1,1],[2,2],[3,3],[4,4],[5,5],[6,6]],np.float64)#,[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26],[27,27],[28,28],[29,29],[30,30]])
 
 # optflow.filterRigidTransform(A, B)
-
-
 
